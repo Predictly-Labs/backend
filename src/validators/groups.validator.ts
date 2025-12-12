@@ -1,0 +1,77 @@
+import { z } from 'zod';
+
+// Create group schema
+export const createGroupSchema = z.object({
+  name: z
+    .string()
+    .min(2, 'Group name must be at least 2 characters')
+    .max(50, 'Group name must be at most 50 characters')
+    .trim(),
+  description: z
+    .string()
+    .max(500, 'Description must be at most 500 characters')
+    .optional()
+    .nullable(),
+  iconUrl: z
+    .string()
+    .url('Invalid icon URL')
+    .optional()
+    .nullable(),
+  isPublic: z
+    .boolean()
+    .default(true),
+});
+
+export type CreateGroupInput = z.infer<typeof createGroupSchema>;
+
+// Update group schema
+export const updateGroupSchema = z.object({
+  name: z
+    .string()
+    .min(2, 'Group name must be at least 2 characters')
+    .max(50, 'Group name must be at most 50 characters')
+    .trim()
+    .optional(),
+  description: z
+    .string()
+    .max(500, 'Description must be at most 500 characters')
+    .optional()
+    .nullable(),
+  iconUrl: z
+    .string()
+    .url('Invalid icon URL')
+    .optional()
+    .nullable(),
+  isPublic: z
+    .boolean()
+    .optional(),
+});
+
+export type UpdateGroupInput = z.infer<typeof updateGroupSchema>;
+
+// Join group schema
+export const joinGroupSchema = z.object({
+  inviteCode: z
+    .string()
+    .length(8, 'Invite code must be 8 characters')
+    .toUpperCase()
+    .regex(/^[A-Z0-9]+$/, 'Invalid invite code format'),
+});
+
+export type JoinGroupInput = z.infer<typeof joinGroupSchema>;
+
+// Update member role schema
+export const updateMemberRoleSchema = z.object({
+  role: z.enum(['ADMIN', 'JUDGE', 'MODERATOR', 'MEMBER']),
+});
+
+export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
+
+// List groups query schema
+export const listGroupsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(50).default(10),
+  search: z.string().optional(),
+});
+
+export type ListGroupsQuery = z.infer<typeof listGroupsQuerySchema>;
