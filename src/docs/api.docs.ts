@@ -372,3 +372,299 @@
  *         createdAt:
  *           type: string
  */
+
+
+/**
+ * @swagger
+ * /api/predictions:
+ *   get:
+ *     tags: [Predictions]
+ *     summary: List prediction markets
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: groupId
+ *         schema:
+ *           type: string
+ *         description: Filter by group
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [ACTIVE, PENDING, RESOLVED, DISPUTED, CANCELLED]
+ *     responses:
+ *       200:
+ *         description: List of markets
+ *
+ *   post:
+ *     tags: [Predictions]
+ *     summary: Create a new prediction market
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - groupId
+ *               - title
+ *               - endDate
+ *             properties:
+ *               groupId:
+ *                 type: string
+ *                 example: "uuid-here"
+ *               title:
+ *                 type: string
+ *                 example: "Will BTC reach $100k by end of 2024?"
+ *               description:
+ *                 type: string
+ *               imageUrl:
+ *                 type: string
+ *               marketType:
+ *                 type: string
+ *                 enum: [STANDARD, NO_LOSS, WITH_YIELD]
+ *                 default: STANDARD
+ *               endDate:
+ *                 type: string
+ *                 format: date-time
+ *               minStake:
+ *                 type: number
+ *                 default: 0.1
+ *               maxStake:
+ *                 type: number
+ *     responses:
+ *       201:
+ *         description: Market created
+ *       403:
+ *         description: Not a group member
+ */
+
+/**
+ * @swagger
+ * /api/predictions/{id}:
+ *   get:
+ *     tags: [Predictions]
+ *     summary: Get market details
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Market details with votes
+ *       404:
+ *         description: Market not found
+ */
+
+/**
+ * @swagger
+ * /api/predictions/{id}/vote:
+ *   post:
+ *     tags: [Predictions]
+ *     summary: Place a vote on a market
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - prediction
+ *               - amount
+ *             properties:
+ *               prediction:
+ *                 type: string
+ *                 enum: [YES, NO]
+ *               amount:
+ *                 type: number
+ *                 example: 1.5
+ *     responses:
+ *       201:
+ *         description: Vote placed
+ *       400:
+ *         description: Already voted or invalid amount
+ */
+
+/**
+ * @swagger
+ * /api/predictions/{id}/resolve:
+ *   post:
+ *     tags: [Predictions]
+ *     summary: Resolve a market (Judge/Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - outcome
+ *             properties:
+ *               outcome:
+ *                 type: string
+ *                 enum: [YES, NO, INVALID]
+ *               resolutionNote:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Market resolved
+ *       403:
+ *         description: Not authorized
+ */
+
+/**
+ * @swagger
+ * /api/predictions/{id}/claim:
+ *   post:
+ *     tags: [Predictions]
+ *     summary: Claim reward for a resolved market
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Reward claimed
+ *       400:
+ *         description: Not eligible or already claimed
+ */
+
+/**
+ * @swagger
+ * /api/predictions/my-votes:
+ *   get:
+ *     tags: [Predictions]
+ *     summary: Get current user's votes
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of user's votes with mock yield
+ */
+
+
+/**
+ * @swagger
+ * /api/subscriptions/checkout:
+ *   post:
+ *     tags: [Subscriptions]
+ *     summary: Create checkout session
+ *     description: Generate a mock checkout URL for Pro subscription
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               plan:
+ *                 type: string
+ *                 enum: [monthly, yearly]
+ *                 default: monthly
+ *     responses:
+ *       200:
+ *         description: Checkout URL generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 checkoutUrl:
+ *                   type: string
+ *                 plan:
+ *                   type: string
+ *                 price:
+ *                   type: number
+ *                 currency:
+ *                   type: string
+ */
+
+/**
+ * @swagger
+ * /api/subscriptions/status:
+ *   get:
+ *     tags: [Subscriptions]
+ *     summary: Get subscription status
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Subscription status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 isPro:
+ *                   type: boolean
+ *                 expiresAt:
+ *                   type: string
+ *                   format: date-time
+ *                 daysRemaining:
+ *                   type: integer
+ */
+
+/**
+ * @swagger
+ * /api/subscriptions/webhook:
+ *   post:
+ *     tags: [Subscriptions]
+ *     summary: Webhook to activate subscription (mock)
+ *     description: Simulates payment webhook to activate Pro status
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - plan
+ *               - transactionId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 format: uuid
+ *               plan:
+ *                 type: string
+ *                 enum: [monthly, yearly]
+ *               transactionId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Subscription activated
+ */

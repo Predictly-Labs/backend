@@ -24,6 +24,11 @@
       "key": "groupId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "marketId",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -359,6 +364,239 @@
               "raw": "{{baseUrl}}/api/upload/image",
               "host": ["{{baseUrl}}"],
               "path": ["api", "upload", "image"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Predictions",
+      "item": [
+        {
+          "name": "List Markets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "groupId", "value": "{{groupId}}", "disabled": true },
+                { "key": "status", "value": "ACTIVE", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Market",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data.id) {",
+                  "    pm.collectionVariables.set('marketId', jsonData.data.id);",
+                  "    console.log('Market ID saved: ' + jsonData.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"groupId\": \"{{groupId}}\",\n  \"title\": \"Will BTC reach $100k by end of 2024?\",\n  \"description\": \"Bitcoin price prediction market\",\n  \"marketType\": \"STANDARD\",\n  \"endDate\": \"2024-12-31T23:59:59Z\",\n  \"minStake\": 0.1,\n  \"maxStake\": 100\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions"]
+            }
+          }
+        },
+        {
+          "name": "Get Market Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "description": "Optional - includes user vote if provided"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/{{marketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "{{marketId}}"]
+            }
+          }
+        },
+        {
+          "name": "Place Vote",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prediction\": \"YES\",\n  \"amount\": 1.5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/{{marketId}}/vote",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "{{marketId}}", "vote"]
+            }
+          }
+        },
+        {
+          "name": "Resolve Market",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outcome\": \"YES\",\n  \"resolutionNote\": \"BTC reached $100k on Dec 5, 2024\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/{{marketId}}/resolve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "{{marketId}}", "resolve"]
+            }
+          }
+        },
+        {
+          "name": "Claim Reward",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/{{marketId}}/claim",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "{{marketId}}", "claim"]
+            }
+          }
+        },
+        {
+          "name": "Get My Votes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/my-votes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "my-votes"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscriptions",
+      "item": [
+        {
+          "name": "Create Checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"monthly\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/subscriptions/checkout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscriptions", "checkout"]
+            }
+          }
+        },
+        {
+          "name": "Get Subscription Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/subscriptions/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscriptions", "status"]
+            }
+          }
+        },
+        {
+          "name": "Activate Subscription (Mock Webhook)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"plan\": \"monthly\",\n  \"transactionId\": \"tx_mock_{{$randomUUID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/subscriptions/webhook",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscriptions", "webhook"]
             }
           }
         }

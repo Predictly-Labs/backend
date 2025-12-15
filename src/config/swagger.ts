@@ -65,6 +65,8 @@ Most endpoints require a JWT token. To obtain a token:
       { name: 'Auth', description: 'Authentication endpoints' },
       { name: 'Users', description: 'User management' },
       { name: 'Groups', description: 'Group management' },
+      { name: 'Predictions', description: 'Prediction markets - create, vote, resolve' },
+      { name: 'Subscriptions', description: 'Pro subscription management' },
       { name: 'Upload', description: 'File upload to IPFS' },
     ],
   },
