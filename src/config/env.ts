@@ -21,9 +21,9 @@ const envSchema = z.object({
   PRIVY_APP_SECRET: z.string().min(1, 'PRIVY_APP_SECRET is required'),
   
   // Movement Network
-  MOVEMENT_RPC_URL: z.string().default('https://devnet.m1.movementlabs.xyz'),
+  MOVEMENT_RPC_URL: z.string().default('https://testnet.movementnetwork.xyz/v1'),
   MOVEMENT_PRIVATE_KEY: z.string().optional(),
-  MOVEMENT_ADDRESS: z.string().optional(),
+  MOVEMENT_CONTRACT_ADDRESS: z.string().default('0x9161980be9b78e96ddae98ceb289f6f4cda5e4af70667667ff9af8438a94e565'),
   
   // JWT
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
@@ -54,9 +54,9 @@ export const env = {
   PINATA_GATEWAY_URL: process.env.PINATA_GATEWAY_URL || 'https://gateway.pinata.cloud/ipfs',
   PRIVY_APP_ID: process.env.PRIVY_APP_ID || '',
   PRIVY_APP_SECRET: process.env.PRIVY_APP_SECRET || '',
-  MOVEMENT_RPC_URL: process.env.MOVEMENT_RPC_URL || 'https://devnet.m1.movementlabs.xyz',
+  MOVEMENT_RPC_URL: process.env.MOVEMENT_RPC_URL || 'https://testnet.movementnetwork.xyz/v1',
   MOVEMENT_PRIVATE_KEY: process.env.MOVEMENT_PRIVATE_KEY || '',
-  MOVEMENT_ADDRESS: process.env.MOVEMENT_ADDRESS || '',
+  MOVEMENT_CONTRACT_ADDRESS: process.env.MOVEMENT_CONTRACT_ADDRESS || '0x9161980be9b78e96ddae98ceb289f6f4cda5e4af70667667ff9af8438a94e565',
   JWT_SECRET: process.env.JWT_SECRET || 'dev-secret-change-in-production',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
 };

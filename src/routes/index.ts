@@ -4,6 +4,7 @@ import usersRouter from './users.routes.js';
 import uploadRouter from './upload.routes.js';
 import predictionsRouter from './predictions.routes.js';
 import subscriptionsRouter from './subscriptions.routes.js';
+import contractRouter from './contract.routes.js';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use('/users', usersRouter);
 router.use('/upload', uploadRouter);
 router.use('/predictions', predictionsRouter);
 router.use('/subscriptions', subscriptionsRouter);
+router.use('/contract', contractRouter);
 
 export default router;
