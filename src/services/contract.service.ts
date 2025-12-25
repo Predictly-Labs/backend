@@ -34,6 +34,7 @@ export const STATUS_CANCELLED = 2;
 
 // Initialize Aptos client for Movement Network
 const config = new AptosConfig({
+  network: Network.CUSTOM,
   fullnode: env.MOVEMENT_RPC_URL,
 });
 
