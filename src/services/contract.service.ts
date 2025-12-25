@@ -64,7 +64,7 @@ function getAdminAccount(): Account | null {
 export async function getMarketCount(): Promise<number> {
   try {
     const payload: InputViewFunctionData = {
-      function: `${MARKET_MODULE}::get_market_count`,
+      function: `${CONTRACT_ADDRESS}::market::get_market_count`,
       functionArguments: [CONTRACT_ADDRESS],
     };
     
@@ -82,7 +82,7 @@ export async function getMarketCount(): Promise<number> {
 export async function getMarketStatus(marketId: number): Promise<number> {
   try {
     const payload: InputViewFunctionData = {
-      function: `${MARKET_MODULE}::get_market_status`,
+      function: `${CONTRACT_ADDRESS}::market::get_market_status`,
       functionArguments: [CONTRACT_ADDRESS, marketId.toString()],
     };
     
@@ -100,7 +100,7 @@ export async function getMarketStatus(marketId: number): Promise<number> {
 export async function getMarketOutcome(marketId: number): Promise<number> {
   try {
     const payload: InputViewFunctionData = {
-      function: `${MARKET_MODULE}::get_market_outcome`,
+      function: `${CONTRACT_ADDRESS}::market::get_market_outcome`,
       functionArguments: [CONTRACT_ADDRESS, marketId.toString()],
     };
     
@@ -118,7 +118,7 @@ export async function getMarketOutcome(marketId: number): Promise<number> {
 export async function getMarketPools(marketId: number): Promise<{ yesPool: number; noPool: number }> {
   try {
     const payload: InputViewFunctionData = {
-      function: `${MARKET_MODULE}::get_market_pools`,
+      function: `${CONTRACT_ADDRESS}::market::get_market_pools`,
       functionArguments: [CONTRACT_ADDRESS, marketId.toString()],
     };
     
@@ -139,7 +139,7 @@ export async function getMarketPools(marketId: number): Promise<{ yesPool: numbe
 export async function getMarketPercentages(marketId: number): Promise<{ yesPct: number; noPct: number }> {
   try {
     const payload: InputViewFunctionData = {
-      function: `${MARKET_MODULE}::get_percentages`,
+      function: `${CONTRACT_ADDRESS}::market::get_percentages`,
       functionArguments: [CONTRACT_ADDRESS, marketId.toString()],
     };
     
@@ -160,7 +160,7 @@ export async function getMarketPercentages(marketId: number): Promise<{ yesPct: 
 export async function getParticipantCount(marketId: number): Promise<number> {
   try {
     const payload: InputViewFunctionData = {
-      function: `${MARKET_MODULE}::get_participant_count`,
+      function: `${CONTRACT_ADDRESS}::market::get_participant_count`,
       functionArguments: [CONTRACT_ADDRESS, marketId.toString()],
     };
     
@@ -178,7 +178,7 @@ export async function getParticipantCount(marketId: number): Promise<number> {
 export async function getVotePrediction(marketId: number, voterAddress: string): Promise<number> {
   try {
     const payload: InputViewFunctionData = {
-      function: `${MARKET_MODULE}::get_vote_prediction`,
+      function: `${CONTRACT_ADDRESS}::market::get_vote_prediction`,
       functionArguments: [CONTRACT_ADDRESS, marketId.toString(), voterAddress],
     };
     
@@ -196,7 +196,7 @@ export async function getVotePrediction(marketId: number, voterAddress: string):
 export async function getVoteAmount(marketId: number, voterAddress: string): Promise<number> {
   try {
     const payload: InputViewFunctionData = {
-      function: `${MARKET_MODULE}::get_vote_amount`,
+      function: `${CONTRACT_ADDRESS}::market::get_vote_amount`,
       functionArguments: [CONTRACT_ADDRESS, marketId.toString(), voterAddress],
     };
     
@@ -214,7 +214,7 @@ export async function getVoteAmount(marketId: number, voterAddress: string): Pro
 export async function calculateReward(marketId: number, voterAddress: string): Promise<number> {
   try {
     const payload: InputViewFunctionData = {
-      function: `${MARKET_MODULE}::calculate_reward`,
+      function: `${CONTRACT_ADDRESS}::market::calculate_reward`,
       functionArguments: [CONTRACT_ADDRESS, marketId.toString(), voterAddress],
     };
     
@@ -242,7 +242,7 @@ export function buildCreateMarketPayload(params: {
   marketType?: number;
 }): InputEntryFunctionData {
   return {
-    function: `${MARKET_MODULE}::create_market`,
+    function: `${CONTRACT_ADDRESS}::market::create_market`,
     functionArguments: [
       CONTRACT_ADDRESS,
       params.title,
@@ -265,7 +265,7 @@ export function buildPlaceVotePayload(params: {
   amount: number;
 }): InputEntryFunctionData {
   return {
-    function: `${MARKET_MODULE}::place_vote`,
+    function: `${CONTRACT_ADDRESS}::market::place_vote`,
     functionArguments: [
       CONTRACT_ADDRESS,
       params.marketId.toString(),
@@ -283,7 +283,7 @@ export function buildResolvePayload(params: {
   outcome: number;
 }): InputEntryFunctionData {
   return {
-    function: `${MARKET_MODULE}::resolve`,
+    function: `${CONTRACT_ADDRESS}::market::resolve`,
     functionArguments: [
       CONTRACT_ADDRESS,
       params.marketId.toString(),
@@ -299,7 +299,7 @@ export function buildClaimRewardPayload(params: {
   marketId: number;
 }): InputEntryFunctionData {
   return {
-    function: `${MARKET_MODULE}::claim_reward`,
+    function: `${CONTRACT_ADDRESS}::market::claim_reward`,
     functionArguments: [
       CONTRACT_ADDRESS,
       params.marketId.toString(),
