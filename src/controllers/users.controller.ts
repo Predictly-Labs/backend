@@ -1,23 +1,36 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/database.js';
 import { generateToken } from '../middleware/auth.middleware.js';
-import { successResponse, createdResponse, notFoundResponse } from '../utils/response.js';
+import { successResponse, createdResponse, notFoundResponse, errorResponse } from '../utils/response.js';
 import type { AuthInput, UpdateUserInput } from '../validators/users.validator.js';
 
 /**
- * Authenticate user with Privy
+ * Authenticate user with Privy (DEPRECATED - kept for backward compatibility)
  * POST /api/auth/privy
+ * @deprecated Use wallet-based authentication instead (POST /api/auth/wallet/verify)
  */
 export async function authWithPrivy(req: Request, res: Response) {
   const { privyId, walletAddress, displayName, avatarUrl } = req.body as AuthInput;
 
-  // Find or create user
-  let user = await prisma.user.findUnique({
-    where: { privyId },
-  });
+  // Find or create user - prioritize walletAddress lookup
+  let user = null;
+  
+  // Try to find by wallet address first (new approach)
+  if (walletAddress) {
+    user = await prisma.user.findUnique({
+      where: { walletAddress },
+    });
+  }
+  
+  // Fallback to privyId lookup (backward compatibility)
+  if (!user && privyId) {
+    user = await prisma.user.findUnique({
+      where: { privyId },
+    });
+  }
 
   if (user) {
-    // Update wallet address if provided
+    // Update wallet address if provided and different
     if (walletAddress && walletAddress !== user.walletAddress) {
       user = await prisma.user.update({
         where: { id: user.id },
@@ -26,13 +39,24 @@ export async function authWithPrivy(req: Request, res: Response) {
     }
   } else {
     // Create new user
+    // Ensure at least one identifier is provided
+    if (!privyId && !walletAddress) {
+      return errorResponse(res, 'Either privyId or walletAddress is required', 400);
+    }
+
+    const createData: any = {
+      privyId,
+      displayName: displayName || (privyId ? `User_${privyId.slice(-6)}` : walletAddress ? `User_${walletAddress.slice(-6)}` : 'User'),
+      avatarUrl,
+    };
+
+    // Only add walletAddress if it's provided
+    if (walletAddress) {
+      createData.walletAddress = walletAddress;
+    }
+
     user = await prisma.user.create({
-      data: {
-        privyId,
-        walletAddress,
-        displayName: displayName || `User_${privyId.slice(-6)}`,
-        avatarUrl,
-      },
+      data: createData,
     });
   }
 
@@ -93,9 +117,15 @@ export async function updateCurrentUser(req: Request, res: Response) {
   const userId = req.user!.id;
   const updateData = req.body as UpdateUserInput;
 
+  // Filter out null values to avoid type issues
+  const cleanUpdateData: any = {};
+  if (updateData.displayName !== undefined) cleanUpdateData.displayName = updateData.displayName;
+  if (updateData.avatarUrl !== undefined) cleanUpdateData.avatarUrl = updateData.avatarUrl;
+  if (updateData.walletAddress) cleanUpdateData.walletAddress = updateData.walletAddress;
+
   const user = await prisma.user.update({
     where: { id: userId },
-    data: updateData,
+    data: cleanUpdateData,
   });
 
   return successResponse(res, user, 'Profile updated successfully');

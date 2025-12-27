@@ -1,8 +1,9 @@
 {
   "info": {
-    "name": "Predictly API",
-    "description": "Prediction Market for Friend Groups - API Collection",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "name": "Predictly API - Hybrid Market System",
+    "description": "Prediction Market with Wallet Authentication & Hybrid On-Chain/Off-Chain System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
   },
   "variable": [
     {
@@ -13,6 +14,16 @@
     {
       "key": "token",
       "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "8b279a9b-17b1-4684-9650-f671bfc640df",
+      "type": "string"
+    },
+    {
+      "key": "walletAddress",
+      "value": "0x9161980be9b78e96ddae98ceb289f6f4cda5e4af70667667ff9af8438a94e565",
       "type": "string"
     },
     {
@@ -44,16 +55,353 @@
               "raw": "{{baseUrl}}/api/health",
               "host": ["{{baseUrl}}"],
               "path": ["api", "health"]
-            }
+            },
+            "description": "Check if the API server is running"
           }
         }
       ]
     },
     {
-      "name": "Auth",
+      "name": "Wallet Authentication",
       "item": [
         {
-          "name": "Register/Login with Privy",
+          "name": "1. Get Sign-In Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data.message) {",
+                  "    // Save the message as a JSON-escaped string",
+                  "    pm.collectionVariables.set('signInMessage', JSON.stringify(jsonData.data.message));",
+                  "    pm.collectionVariables.set('nonce', jsonData.data.nonce);",
+                  "    console.log('Sign-in message saved!');",
+                  "    console.log('Message:', jsonData.data.message);",
+                  "    console.log('Nonce:', jsonData.data.nonce);",
+                  "    console.log('Expires at:', jsonData.data.expiresAt);",
+                  "    console.log('');",
+                  "    console.log('⚠️  IMPORTANT: Copy the message above and sign it with your wallet.');",
+                  "    console.log('Then paste the signature in the next request.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"walletAddress\": \"{{walletAddress}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/wallet/message",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "wallet", "message"]
+            },
+            "description": "Generate a message to be signed by the user's wallet. The nonce expires after 5 minutes."
+          }
+        },
+        {
+          "name": "2. Verify Signature & Login",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// This script runs before the request",
+                  "// It ensures the message is properly formatted in the request body"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.data.token);",
+                  "    pm.collectionVariables.set('userId', jsonData.data.user.id);",
+                  "    console.log('Token saved!');",
+                  "    console.log('User ID:', jsonData.data.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"walletAddress\": \"{{walletAddress}}\",\n  \"signature\": \"YOUR_WALLET_SIGNATURE_HERE\",\n  \"publicKey\": \"YOUR_PUBLIC_KEY_HERE\",\n  \"message\": {{signInMessage}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/wallet/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "wallet", "verify"]
+            },
+            "description": "Verify the signed message and authenticate the user. Sign the message from step 1 with your wallet."
+          }
+        },
+        {
+          "name": "3. Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Get the authenticated user's profile"
+          }
+        }
+      ],
+      "description": "New wallet-based authentication endpoints"
+    },
+    {
+      "name": "Markets (Hybrid System)",
+      "item": [
+        {
+          "name": "1. Create Market (Off-Chain)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data.id) {",
+                  "    pm.collectionVariables.set('marketId', jsonData.data.id);",
+                  "    console.log('Market ID saved:', jsonData.data.id);",
+                  "    console.log('Status:', jsonData.data.status);",
+                  "    console.log('On-Chain ID:', jsonData.data.onChainId || 'Not initialized yet');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"groupId\": \"{{groupId}}\",\n  \"title\": \"Will Bitcoin reach $100k by end of 2024?\",\n  \"description\": \"Bitcoin price prediction market\",\n  \"marketType\": \"STANDARD\",\n  \"endDate\": \"2024-12-31T23:59:59Z\",\n  \"minStake\": 1.0,\n  \"maxStake\": 100.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/markets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markets"]
+            },
+            "description": "Create a new market off-chain (FREE - no gas fees). Market status will be PENDING until initialized on-chain."
+          }
+        },
+        {
+          "name": "2. Initialize Market (On-Chain)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data.onChainId) {",
+                  "    console.log('Market initialized on-chain!');",
+                  "    console.log('On-Chain ID:', jsonData.data.onChainId);",
+                  "    console.log('Status:', jsonData.data.status);",
+                  "    console.log('Transaction Hash:', jsonData.data.transactionHash);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/markets/{{marketId}}/initialize",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markets", "{{marketId}}", "initialize"]
+            },
+            "description": "Initialize market on-chain. Backend relay wallet pays gas fees. This is typically called automatically before first vote."
+          }
+        },
+        {
+          "name": "3. Get Market Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/markets/{{marketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markets", "{{marketId}}"]
+            },
+            "description": "Get market details with on-chain data (if initialized)"
+          }
+        },
+        {
+          "name": "4. Get Group Markets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/{{groupId}}/markets?status=ACTIVE&limit=10&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "{{groupId}}", "markets"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "description": "Filter by status: PENDING, ACTIVE, RESOLVED, CANCELLED"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Get all markets for a specific group with optional filters"
+          }
+        },
+        {
+          "name": "5. Sync Market Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/markets/{{marketId}}/sync",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markets", "{{marketId}}", "sync"]
+            },
+            "description": "Manually sync market data from blockchain (auto-syncs every 1 minute for active markets)"
+          }
+        }
+      ],
+      "description": "Hybrid market system - create off-chain (free), vote on-chain (user pays gas)"
+    },
+    {
+      "name": "Admin Endpoints",
+      "item": [
+        {
+          "name": "Get Relay Wallet Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/relay-wallet/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "relay-wallet", "balance"]
+            },
+            "description": "Check relay wallet balance (requires admin token)"
+          }
+        },
+        {
+          "name": "Get Relay Wallet Transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/relay-wallet/transactions?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "relay-wallet", "transactions"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Get relay wallet transaction history (requires admin token)"
+          }
+        },
+        {
+          "name": "Monitor Relay Wallet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/relay-wallet/monitor",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "relay-wallet", "monitor"]
+            },
+            "description": "Manually trigger relay wallet monitoring (requires admin token)"
+          }
+        }
+      ],
+      "description": "Admin endpoints for monitoring relay wallet"
+    },
+    {
+      "name": "Legacy Auth (Deprecated)",
+      "item": [
+        {
+          "name": "Register/Login with Privy (DEPRECATED)",
           "event": [
             {
               "listen": "test",
@@ -86,10 +434,12 @@
               "raw": "{{baseUrl}}/api/users/auth/privy",
               "host": ["{{baseUrl}}"],
               "path": ["api", "users", "auth", "privy"]
-            }
+            },
+            "description": "DEPRECATED: Use wallet-based authentication instead"
           }
         }
-      ]
+      ],
+      "description": "Legacy Privy authentication (kept for backward compatibility)"
     },
     {
       "name": "Users",
@@ -137,14 +487,45 @@
           }
         },
         {
+          "name": "Get User By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get User Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "stats"]
+            }
+          }
+        },
+        {
           "name": "Get Leaderboard",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/users/leaderboard",
+              "raw": "{{baseUrl}}/api/users/leaderboard?groupId={{groupId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "leaderboard"]
+              "path": ["api", "users", "leaderboard"],
+              "query": [
+                {
+                  "key": "groupId",
+                  "value": "{{groupId}}",
+                  "description": "Optional: Filter by group"
+                }
+              ]
             }
           }
         }
@@ -267,73 +648,6 @@
               "path": ["api", "groups", "{{groupId}}", "members"]
             }
           }
-        },
-        {
-          "name": "Update Member Role",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"role\": \"JUDGE\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}/members/{{userId}}/role",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "groups", "{{groupId}}", "members", "{{userId}}", "role"]
-            }
-          }
-        },
-        {
-          "name": "Update Group",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Group Name\",\n  \"description\": \"Updated description\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "groups", "{{groupId}}"]
-            }
-          }
-        },
-        {
-          "name": "Delete Group",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/groups/{{groupId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "groups", "{{groupId}}"]
-            }
-          }
         }
       ]
     },
@@ -364,239 +678,6 @@
               "raw": "{{baseUrl}}/api/upload/image",
               "host": ["{{baseUrl}}"],
               "path": ["api", "upload", "image"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Predictions",
-      "item": [
-        {
-          "name": "List Markets",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/predictions?page=1&limit=10",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "predictions"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "groupId", "value": "{{groupId}}", "disabled": true },
-                { "key": "status", "value": "ACTIVE", "disabled": true }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Market",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var jsonData = pm.response.json();",
-                  "if (jsonData.success && jsonData.data.id) {",
-                  "    pm.collectionVariables.set('marketId', jsonData.data.id);",
-                  "    console.log('Market ID saved: ' + jsonData.data.id);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"groupId\": \"{{groupId}}\",\n  \"title\": \"Will BTC reach $100k by end of 2024?\",\n  \"description\": \"Bitcoin price prediction market\",\n  \"marketType\": \"STANDARD\",\n  \"endDate\": \"2024-12-31T23:59:59Z\",\n  \"minStake\": 0.1,\n  \"maxStake\": 100\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/predictions",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "predictions"]
-            }
-          }
-        },
-        {
-          "name": "Get Market Detail",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "description": "Optional - includes user vote if provided"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/predictions/{{marketId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "predictions", "{{marketId}}"]
-            }
-          }
-        },
-        {
-          "name": "Place Vote",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"prediction\": \"YES\",\n  \"amount\": 1.5\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/predictions/{{marketId}}/vote",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "predictions", "{{marketId}}", "vote"]
-            }
-          }
-        },
-        {
-          "name": "Resolve Market",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"outcome\": \"YES\",\n  \"resolutionNote\": \"BTC reached $100k on Dec 5, 2024\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/predictions/{{marketId}}/resolve",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "predictions", "{{marketId}}", "resolve"]
-            }
-          }
-        },
-        {
-          "name": "Claim Reward",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/predictions/{{marketId}}/claim",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "predictions", "{{marketId}}", "claim"]
-            }
-          }
-        },
-        {
-          "name": "Get My Votes",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/predictions/my-votes",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "predictions", "my-votes"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Subscriptions",
-      "item": [
-        {
-          "name": "Create Checkout",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"plan\": \"monthly\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/subscriptions/checkout",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "subscriptions", "checkout"]
-            }
-          }
-        },
-        {
-          "name": "Get Subscription Status",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/subscriptions/status",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "subscriptions", "status"]
-            }
-          }
-        },
-        {
-          "name": "Activate Subscription (Mock Webhook)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"plan\": \"monthly\",\n  \"transactionId\": \"tx_mock_{{$randomUUID}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/subscriptions/webhook",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "subscriptions", "webhook"]
             }
           }
         }

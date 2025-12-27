@@ -10,8 +10,8 @@ declare global {
     interface Request {
       user?: {
         id: string;
-        privyId: string;
-        walletAddress?: string | null;
+        walletAddress: string;
+        privyId?: string | null;
       };
     }
   }
@@ -19,8 +19,8 @@ declare global {
 
 interface JwtPayload {
   userId: string;
-  privyId: string;
-  walletAddress?: string;
+  walletAddress: string;
+  privyId?: string; // Legacy field for backward compatibility
 }
 
 /**
@@ -47,7 +47,7 @@ export async function authMiddleware(
       // Optionally verify user still exists
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
-        select: { id: true, privyId: true, walletAddress: true },
+        select: { id: true, walletAddress: true, privyId: true },
       });
 
       if (!user) {
@@ -87,7 +87,7 @@ export async function optionalAuthMiddleware(
       
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
-        select: { id: true, privyId: true, walletAddress: true },
+        select: { id: true, walletAddress: true, privyId: true },
       });
 
       if (user) {
@@ -106,12 +106,12 @@ export async function optionalAuthMiddleware(
 /**
  * Generate JWT token for a user
  */
-export function generateToken(user: { id: string; privyId: string; walletAddress?: string | null }): string {
+export function generateToken(user: { id: string; walletAddress: string; privyId?: string | null }): string {
   return jwt.sign(
     {
       userId: user.id,
-      privyId: user.privyId,
       walletAddress: user.walletAddress,
+      privyId: user.privyId, // Include for backward compatibility
     },
     env.JWT_SECRET,
     { expiresIn: '7d' }

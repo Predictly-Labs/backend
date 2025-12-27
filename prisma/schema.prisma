@@ -15,25 +15,25 @@ datasource db {
 // ══════════════════════════════════════════════════════════════
 
 model User {
-  id              String   @id @default(uuid())
-  privyId         String   @unique
-  walletAddress   String?  @unique
-  displayName     String?
-  avatarUrl       String?
-  
+  id            String  @id @default(uuid())
+  privyId       String? @unique
+  walletAddress String  @unique
+  displayName   String?
+  avatarUrl     String?
+
   // Stats (cached for leaderboard)
   totalPredictions   Int   @default(0)
   correctPredictions Int   @default(0)
   totalEarnings      Float @default(0)
   currentStreak      Int   @default(0)
-  
+
   // Subscription
-  isPro           Boolean   @default(false)
-  proExpiresAt    DateTime?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  isPro        Boolean   @default(false)
+  proExpiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
   memberships     GroupMember[]
   votes           Vote[]
@@ -47,35 +47,35 @@ model User {
 // ══════════════════════════════════════════════════════════════
 
 model Group {
-  id              String   @id @default(uuid())
-  name            String
-  description     String?
-  iconUrl         String?
-  inviteCode      String   @unique
-  isPublic        Boolean  @default(true)
-  
-  createdById     String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  iconUrl     String?
+  inviteCode  String  @unique
+  isPublic    Boolean @default(true)
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   // Relations
-  createdBy       User          @relation("GroupCreator", fields: [createdById], references: [id])
-  members         GroupMember[]
-  markets         PredictionMarket[]
+  createdBy User               @relation("GroupCreator", fields: [createdById], references: [id])
+  members   GroupMember[]
+  markets   PredictionMarket[]
 }
 
 model GroupMember {
-  id              String    @id @default(uuid())
-  groupId         String
-  userId          String
-  role            GroupRole @default(MEMBER)
-  
-  joinedAt        DateTime  @default(now())
-  
+  id      String    @id @default(uuid())
+  groupId String
+  userId  String
+  role    GroupRole @default(MEMBER)
+
+  joinedAt DateTime @default(now())
+
   // Relations
-  group           Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([groupId, userId])
   @@index([groupId])
   @@index([userId])
@@ -93,45 +93,45 @@ enum GroupRole {
 // ══════════════════════════════════════════════════════════════
 
 model PredictionMarket {
-  id              String        @id @default(uuid())
-  onChainId       String?       @unique
-  
-  groupId         String
-  title           String
-  description     String?
-  imageUrl        String?
-  
+  id        String  @id @default(uuid())
+  onChainId String? @unique
+
+  groupId     String
+  title       String
+  description String?
+  imageUrl    String?
+
   // Market config
-  marketType      MarketType    @default(STANDARD)
-  endDate         DateTime
-  minStake        Float         @default(0.1)
-  maxStake        Float?
-  
+  marketType MarketType @default(STANDARD)
+  endDate    DateTime
+  minStake   Float      @default(0.1)
+  maxStake   Float?
+
   // Cached stats (synced from on-chain)
-  status          MarketStatus  @default(ACTIVE)
-  outcome         MarketOutcome?
-  totalVolume     Float         @default(0)
-  yesPool         Float         @default(0)
-  noPool          Float         @default(0)
-  yesPercentage   Float         @default(50)
-  noPercentage    Float         @default(50)
-  participantCount Int          @default(0)
-  
+  status           MarketStatus   @default(PENDING)
+  outcome          MarketOutcome?
+  totalVolume      Float          @default(0)
+  yesPool          Float          @default(0)
+  noPool           Float          @default(0)
+  yesPercentage    Float          @default(50)
+  noPercentage     Float          @default(50)
+  participantCount Int            @default(0)
+
   // Resolution
-  resolvedById    String?
-  resolvedAt      DateTime?
-  resolutionNote  String?
-  
-  createdById     String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
+  resolvedById   String?
+  resolvedAt     DateTime?
+  resolutionNote String?
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   // Relations
-  group           Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  creator         User          @relation("MarketCreator", fields: [createdById], references: [id])
-  resolver        User?         @relation("MarketResolver", fields: [resolvedById], references: [id])
-  votes           Vote[]
-  
+  group    Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  creator  User   @relation("MarketCreator", fields: [createdById], references: [id])
+  resolver User?  @relation("MarketResolver", fields: [resolvedById], references: [id])
+  votes    Vote[]
+
   @@index([groupId])
   @@index([status])
   @@index([createdById])
@@ -144,8 +144,8 @@ enum MarketType {
 }
 
 enum MarketStatus {
-  ACTIVE
   PENDING
+  ACTIVE
   RESOLVED
   DISPUTED
   CANCELLED
@@ -162,24 +162,24 @@ enum MarketOutcome {
 // ══════════════════════════════════════════════════════════════
 
 model Vote {
-  id              String         @id @default(uuid())
-  onChainTxHash   String?        @unique
-  
-  marketId        String
-  userId          String
-  prediction      VotePrediction
-  amount          Float
-  
+  id            String  @id @default(uuid())
+  onChainTxHash String? @unique
+
+  marketId   String
+  userId     String
+  prediction VotePrediction
+  amount     Float
+
   // Reward tracking
   hasClaimedReward Boolean @default(false)
-  rewardAmount    Float?
-  
-  createdAt       DateTime @default(now())
-  
+  rewardAmount     Float?
+
+  createdAt DateTime @default(now())
+
   // Relations
-  market          PredictionMarket @relation(fields: [marketId], references: [id], onDelete: Cascade)
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  market PredictionMarket @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([marketId, userId])
   @@index([marketId])
   @@index([userId])
@@ -195,25 +195,73 @@ enum VotePrediction {
 // ══════════════════════════════════════════════════════════════
 
 model Badge {
-  id              String   @id @default(uuid())
-  name            String   @unique
-  description     String
-  iconUrl         String
-  requirement     String
-  
-  userBadges      UserBadge[]
+  id          String @id @default(uuid())
+  name        String @unique
+  description String
+  iconUrl     String
+  requirement String
+
+  userBadges UserBadge[]
 }
 
 model UserBadge {
-  id              String   @id @default(uuid())
-  userId          String
-  badgeId         String
-  earnedAt        DateTime @default(now())
-  
+  id       String   @id @default(uuid())
+  userId   String
+  badgeId  String
+  earnedAt DateTime @default(now())
+
   // Relations
-  badge           Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
-  
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
   @@unique([userId, badgeId])
   @@index([userId])
   @@index([badgeId])
+}
+
+// ══════════════════════════════════════════════════════════════
+// INITIALIZATION LOCK
+// ══════════════════════════════════════════════════════════════
+
+model InitializationLock {
+  marketId  String   @id
+  lockedAt  DateTime @default(now())
+  lockedBy  String
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+// ══════════════════════════════════════════════════════════════
+// AUTH NONCE (Replaces Redis)
+// ══════════════════════════════════════════════════════════════
+
+model AuthNonce {
+  id            String   @id @default(uuid())
+  walletAddress String
+  nonce         String
+  timestamp     String
+  expiresAt     DateTime
+
+  createdAt DateTime @default(now())
+
+  @@unique([walletAddress, nonce])
+  @@index([walletAddress])
+  @@index([expiresAt])
+}
+
+// ══════════════════════════════════════════════════════════════
+// RATE LIMIT (Replaces Redis)
+// ══════════════════════════════════════════════════════════════
+
+model RateLimit {
+  id         String   @id @default(uuid())
+  identifier String // IP address or user ID
+  endpoint   String // e.g., "auth:wallet", "market:create"
+  count      Int      @default(1)
+  windowStart DateTime @default(now())
+  expiresAt  DateTime
+
+  @@unique([identifier, endpoint])
+  @@index([identifier])
+  @@index([expiresAt])
 }

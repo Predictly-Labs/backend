@@ -10,6 +10,7 @@ import {
   updateMemberRole,
   removeMember,
 } from '../controllers/groups.controller.js';
+import { getGroupMarkets } from '../controllers/markets.controller.js';
 import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.middleware.js';
 import { validateBody, validateQuery } from '../middleware/validate.middleware.js';
 import { 
@@ -26,6 +27,7 @@ const router = Router();
 router.get('/', validateQuery(listGroupsQuerySchema), getGroups);
 router.get('/:id', optionalAuthMiddleware, getGroupById);
 router.get('/:id/members', getGroupMembers);
+router.get('/:groupId/markets', getGroupMarkets); // Get markets in group
 
 // Protected routes (require auth)
 router.post('/', authMiddleware, validateBody(createGroupSchema), createGroup);

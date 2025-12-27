@@ -26,11 +26,141 @@
 
 /**
  * @swagger
+ * /api/auth/wallet/message:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Get sign-in message for wallet authentication
+ *     description: Generate a message to be signed by the user's wallet. The nonce expires after 5 minutes.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - walletAddress
+ *             properties:
+ *               walletAddress:
+ *                 type: string
+ *                 example: "0x9161980be9b78e96ddae98ceb289f6f4cda5e4af70667667ff9af8438a94e565"
+ *                 description: Movement/Aptos wallet address
+ *     responses:
+ *       200:
+ *         description: Sign-in message generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: "Sign in to Predictly\n\nWallet: 0x9161...\nNonce: abc123\nTimestamp: 1234567890\n\nThis request will not trigger a blockchain transaction or cost any gas fees."
+ *                     nonce:
+ *                       type: string
+ *                       example: "abc123xyz"
+ *                     expiresAt:
+ *                       type: string
+ *                       format: date-time
+ *       429:
+ *         description: Too many requests (5 attempts per 15 minutes)
+
+/**
+ * @swagger
+ * /api/auth/wallet/verify:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Verify wallet signature and authenticate
+ *     description: Verify the signed message and authenticate the user. Returns JWT token for subsequent requests.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - walletAddress
+ *               - signature
+ *               - message
+ *             properties:
+ *               walletAddress:
+ *                 type: string
+ *                 example: "0x9161980be9b78e96ddae98ceb289f6f4cda5e4af70667667ff9af8438a94e565"
+ *               signature:
+ *                 type: string
+ *                 example: "0xc9b1008bc9a32c5e859c8624e6d088de..."
+ *                 description: Hex-encoded signature from wallet
+ *               publicKey:
+ *                 type: string
+ *                 example: "0xa799e03c79e6d1779a84d8b254f61b14..."
+ *                 description: Public key (optional, required in production)
+ *               message:
+ *                 type: string
+ *                 example: "Sign in to Predictly\n\nWallet: 0x9161...\nNonce: abc123..."
+ *                 description: The exact message that was signed
+ *     responses:
+ *       200:
+ *         description: Authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *                     token:
+ *                       type: string
+ *                       example: "eyJhbGciOiJIUzI1NiIs..."
+ *       401:
+ *         description: Signature verification failed
+ *       429:
+ *         description: Too many requests (5 attempts per 15 minutes)
+
+/**
+ * @swagger
+ * /api/auth/me:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Get current authenticated user
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Current user profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized
+
+/**
+ * @swagger
  * /api/users/auth/privy:
  *   post:
  *     tags: [Auth]
- *     summary: Authenticate with Privy
- *     description: Register or login user with Privy ID. Returns JWT token for subsequent requests.
+ *     summary: Authenticate with Privy (DEPRECATED)
+ *     deprecated: true
+ *     description: |
+ *       **DEPRECATED**: Use `/api/auth/wallet/message` and `/api/auth/wallet/verify` instead.
+ *       
+ *       Register or login user with Privy ID. Returns JWT token for subsequent requests.
  *     requestBody:
  *       required: true
  *       content:
@@ -328,6 +458,17 @@
 /**
  * @swagger
  * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *       description: JWT token from wallet authentication
+ *     adminToken:
+ *       type: apiKey
+ *       in: header
+ *       name: X-Admin-Token
+ *       description: Admin token for protected endpoints
  *   schemas:
  *     User:
  *       type: object
@@ -336,8 +477,11 @@
  *           type: string
  *         privyId:
  *           type: string
+ *           nullable: true
+ *           description: Legacy Privy ID (deprecated)
  *         walletAddress:
  *           type: string
+ *           description: Movement/Aptos wallet address (primary identifier)
  *         displayName:
  *           type: string
  *         avatarUrl:
@@ -369,6 +513,50 @@
  *           type: string
  *         isPublic:
  *           type: boolean
+ *         createdAt:
+ *           type: string
+ *     Market:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *           description: Off-chain market ID
+ *         onChainId:
+ *           type: string
+ *           nullable: true
+ *           description: On-chain market ID (null if PENDING)
+ *         groupId:
+ *           type: string
+ *         title:
+ *           type: string
+ *         description:
+ *           type: string
+ *         status:
+ *           type: string
+ *           enum: [PENDING, ACTIVE, RESOLVED]
+ *           description: |
+ *             - PENDING: Created off-chain, not yet on blockchain
+ *             - ACTIVE: Initialized on-chain, accepting votes
+ *             - RESOLVED: Market outcome determined
+ *         marketType:
+ *           type: string
+ *           enum: [STANDARD, NO_LOSS, WITH_YIELD]
+ *         endDate:
+ *           type: string
+ *           format: date-time
+ *         minStake:
+ *           type: number
+ *         maxStake:
+ *           type: number
+ *         yesPool:
+ *           type: number
+ *           description: Total YES votes (synced from blockchain)
+ *         noPool:
+ *           type: number
+ *           description: Total NO votes (synced from blockchain)
+ *         participantCount:
+ *           type: integer
  *         createdAt:
  *           type: string
  */
@@ -573,6 +761,256 @@
  *     responses:
  *       200:
  *         description: List of user's votes with mock yield
+ */
+
+/**
+ * @swagger
+ * /api/markets:
+ *   post:
+ *     tags: [Markets (Hybrid)]
+ *     summary: Create market off-chain (FREE)
+ *     description: |
+ *       Create a new prediction market off-chain. This is FREE - no gas fees required.
+ *       Market will be in PENDING status until initialized on-chain.
+ *       
+ *       **Hybrid System Flow:**
+ *       1. Create market off-chain (FREE) → Status: PENDING
+ *       2. Initialize on-chain (backend pays gas) → Status: ACTIVE
+ *       3. Users vote on-chain (users pay gas)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - groupId
+ *               - question
+ *               - endTime
+ *             properties:
+ *               groupId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: "uuid-here"
+ *               question:
+ *                 type: string
+ *                 example: "Will Bitcoin reach $100k by end of 2025?"
+ *               description:
+ *                 type: string
+ *                 example: "Market resolves YES if BTC hits $100k, NO otherwise"
+ *               endTime:
+ *                 type: string
+ *                 format: date-time
+ *                 example: "2025-12-31T23:59:59Z"
+ *               options:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["YES", "NO"]
+ *     responses:
+ *       201:
+ *         description: Market created off-chain (PENDING status)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                       example: "PENDING"
+ *                     question:
+ *                       type: string
+ *       429:
+ *         description: Rate limited (10 markets per hour)
+
+/**
+ * @swagger
+ * /api/markets/{id}/initialize:
+ *   post:
+ *     tags: [Markets (Hybrid)]
+ *     summary: Initialize market on-chain (Backend pays gas)
+ *     description: |
+ *       Initialize a PENDING market on the blockchain. The backend relay wallet pays the gas fees.
+ *       After initialization, market status changes to ACTIVE and users can start voting.
+ *       
+ *       **Race Condition Protection:** Uses PostgreSQL advisory locks to prevent duplicate initialization.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Market ID from off-chain creation
+ *     responses:
+ *       200:
+ *         description: Market initialized on-chain
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     onChainId:
+ *                       type: string
+ *                       example: "9"
+ *                       description: Market ID on the blockchain
+ *                     txHash:
+ *                       type: string
+ *                       example: "0x31bcbbf910e992de..."
+ *                     status:
+ *                       type: string
+ *                       example: "ACTIVE"
+ *       400:
+ *         description: Market already initialized or invalid status
+ *       429:
+ *         description: Rate limited (3 attempts per 5 minutes per market)
+
+/**
+ * @swagger
+ * /api/markets/{id}:
+ *   get:
+ *     tags: [Markets (Hybrid)]
+ *     summary: Get market details with on-chain data
+ *     description: |
+ *       Get market details including both off-chain metadata and on-chain state.
+ *       For ACTIVE markets, fetches live data from the blockchain.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Market details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     onChainId:
+ *                       type: string
+ *                     status:
+ *                       type: string
+ *                       enum: [PENDING, ACTIVE, RESOLVED]
+ *                     question:
+ *                       type: string
+ *                     yesPool:
+ *                       type: number
+ *                       description: Total YES votes (from blockchain)
+ *                     noPool:
+ *                       type: number
+ *                       description: Total NO votes (from blockchain)
+ *                     participantCount:
+ *                       type: number
+ *       404:
+ *         description: Market not found
+
+/**
+ * @swagger
+ * /api/markets/{id}/sync:
+ *   post:
+ *     tags: [Markets (Hybrid)]
+ *     summary: Sync market data from blockchain
+ *     description: Manually trigger sync of on-chain data to database cache
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Market data synced
+ *       400:
+ *         description: Market not initialized on-chain
+
+/**
+ * @swagger
+ * /api/groups/{groupId}/markets:
+ *   get:
+ *     tags: [Markets (Hybrid)]
+ *     summary: Get markets for a group
+ *     description: List all markets in a group with optional status filter
+ *     parameters:
+ *       - in: path
+ *         name: groupId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, ACTIVE, RESOLVED]
+ *         description: Filter by market status
+ *     responses:
+ *       200:
+ *         description: List of markets
+
+/**
+ * @swagger
+ * /api/admin/relay-wallet/balance:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get relay wallet balance
+ *     description: Check the balance of the backend relay wallet (requires admin token)
+ *     security:
+ *       - adminToken: []
+ *     responses:
+ *       200:
+ *         description: Relay wallet balance
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     address:
+ *                       type: string
+ *                       example: "0x9161980be9b78e96ddae98ceb289f6f4cda5e4af70667667ff9af8438a94e565"
+ *                     balance:
+ *                       type: number
+ *                       example: 19.4825
+ *                       description: Balance in MOVE tokens
+ *                     minBalance:
+ *                       type: number
+ *                       example: 10
+ *                       description: Minimum recommended balance
+ *       401:
+ *         description: Invalid admin token
  */
 
 

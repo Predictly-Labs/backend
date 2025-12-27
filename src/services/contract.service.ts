@@ -386,3 +386,90 @@ export async function resolveMarketOnChain(params: {
 
 // Export aptos client for advanced usage
 export { aptos, CONTRACT_ADDRESS };
+
+// ==================== Conversion Utilities ====================
+
+const OCTAS_PER_MOVE = 100_000_000;
+const BASIS_POINTS_PER_PERCENT = 100;
+
+/**
+ * Convert MOVE to octas
+ */
+export function moveToOctas(move: number): number {
+  return Math.floor(move * OCTAS_PER_MOVE);
+}
+
+/**
+ * Convert octas to MOVE
+ */
+export function octasToMove(octas: number): number {
+  return octas / OCTAS_PER_MOVE;
+}
+
+/**
+ * Convert percentage to basis points
+ */
+export function percentToBasisPoints(percent: number): number {
+  return Math.floor(percent * BASIS_POINTS_PER_PERCENT);
+}
+
+/**
+ * Convert basis points to percentage
+ */
+export function basisPointsToPercent(basisPoints: number): number {
+  return basisPoints / BASIS_POINTS_PER_PERCENT;
+}
+
+/**
+ * Get complete market data from on-chain
+ */
+export async function getMarketData(marketId: number) {
+  try {
+    const [status, outcome, pools, percentages, participantCount] = await Promise.all([
+      getMarketStatus(marketId),
+      getMarketOutcome(marketId),
+      getMarketPools(marketId),
+      getMarketPercentages(marketId),
+      getParticipantCount(marketId),
+    ]);
+
+    return {
+      status,
+      outcome,
+      yesPool: octasToMove(pools.yesPool),
+      noPool: octasToMove(pools.noPool),
+      totalVolume: octasToMove(pools.yesPool + pools.noPool),
+      yesPercentage: percentages.yesPct,
+      noPercentage: percentages.noPct,
+      participantCount,
+    };
+  } catch (error) {
+    console.error('Error getting complete market data:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get user vote data for a market
+ */
+export async function getUserVote(marketId: number, userAddress: string) {
+  try {
+    const [prediction, amount] = await Promise.all([
+      getVotePrediction(marketId, userAddress),
+      getVoteAmount(marketId, userAddress),
+    ]);
+
+    if (amount === 0) {
+      return null; // User hasn't voted
+    }
+
+    return {
+      prediction,
+      amount: octasToMove(amount),
+    };
+  } catch (error) {
+    console.error('Error getting user vote:', error);
+    return null;
+  }
+}
+
