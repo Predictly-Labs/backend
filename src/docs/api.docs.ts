@@ -69,6 +69,7 @@
  *                       format: date-time
  *       429:
  *         description: Too many requests (5 attempts per 15 minutes)
+ */
 
 /**
  * @swagger
@@ -126,6 +127,7 @@
  *         description: Signature verification failed
  *       429:
  *         description: Too many requests (5 attempts per 15 minutes)
+ */
 
 /**
  * @swagger
@@ -149,6 +151,7 @@
  *                   $ref: '#/components/schemas/User'
  *       401:
  *         description: Unauthorized
+ */
 
 /**
  * @swagger
@@ -219,6 +222,15 @@
  *     responses:
  *       200:
  *         description: User profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
  *       401:
  *         description: Unauthorized
  *   put:
@@ -227,6 +239,7 @@
  *     security:
  *       - bearerAuth: []
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
@@ -234,11 +247,102 @@
  *             properties:
  *               displayName:
  *                 type: string
+ *                 example: "Updated Name"
  *               avatarUrl:
  *                 type: string
+ *                 example: "https://example.com/avatar.png"
  *     responses:
  *       200:
- *         description: Profile updated
+ *         description: Profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/users/{userId}:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get user by ID
+ *     description: Get public profile information for any user
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       404:
+ *         description: User not found
+ */
+
+/**
+ * @swagger
+ * /api/users/{userId}/stats:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get user statistics
+ *     description: Get detailed statistics for a user including prediction accuracy and earnings
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: User statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalPredictions:
+ *                       type: integer
+ *                       example: 42
+ *                     correctPredictions:
+ *                       type: integer
+ *                       example: 28
+ *                     accuracy:
+ *                       type: number
+ *                       example: 66.67
+ *                     totalEarnings:
+ *                       type: number
+ *                       example: 125.50
+ *                     currentStreak:
+ *                       type: integer
+ *                       example: 5
+ *       404:
+ *         description: User not found
  */
 
 /**
@@ -247,15 +351,41 @@
  *   get:
  *     tags: [Users]
  *     summary: Get leaderboard
+ *     description: Get ranked list of users by prediction accuracy and earnings
  *     parameters:
  *       - in: query
  *         name: groupId
  *         schema:
  *           type: string
+ *           format: uuid
  *         description: Filter by group (optional)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Number of users to return
  *     responses:
  *       200:
  *         description: Leaderboard data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     allOf:
+ *                       - $ref: '#/components/schemas/User'
+ *                       - type: object
+ *                         properties:
+ *                           rank:
+ *                             type: integer
+ *                           accuracy:
+ *                             type: number
  */
 
 /**
@@ -328,15 +458,82 @@
  *   get:
  *     tags: [Groups]
  *     summary: Get group detail
+ *     description: Get detailed information about a group including members and markets
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *           format: uuid
+ *         description: Group ID
  *     responses:
  *       200:
  *         description: Group detail with members and markets
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   allOf:
+ *                     - $ref: '#/components/schemas/Group'
+ *                     - type: object
+ *                       properties:
+ *                         memberCount:
+ *                           type: integer
+ *                         marketCount:
+ *                           type: integer
+ *       404:
+ *         description: Group not found
+ */
+
+/**
+ * @swagger
+ * /api/groups/{groupId}/members:
+ *   get:
+ *     tags: [Groups]
+ *     summary: Get group members
+ *     description: Get list of all members in a group with their roles
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: groupId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Group ID
+ *     responses:
+ *       200:
+ *         description: List of group members
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       user:
+ *                         $ref: '#/components/schemas/User'
+ *                       role:
+ *                         type: string
+ *                         enum: [ADMIN, JUDGE, MODERATOR, MEMBER]
+ *                       joinedAt:
+ *                         type: string
+ *                         format: date-time
+ *       403:
+ *         description: Not a member of this group
  *       404:
  *         description: Group not found
  */
@@ -787,28 +984,35 @@
  *             type: object
  *             required:
  *               - groupId
- *               - question
- *               - endTime
+ *               - title
+ *               - endDate
  *             properties:
  *               groupId:
  *                 type: string
  *                 format: uuid
  *                 example: "uuid-here"
- *               question:
+ *               title:
  *                 type: string
- *                 example: "Will Bitcoin reach $100k by end of 2025?"
+ *                 example: "Will Bitcoin reach $100k by end of 2024?"
  *               description:
  *                 type: string
- *                 example: "Market resolves YES if BTC hits $100k, NO otherwise"
- *               endTime:
+ *                 example: "Bitcoin price prediction market"
+ *               marketType:
+ *                 type: string
+ *                 enum: [STANDARD, NO_LOSS, WITH_YIELD]
+ *                 default: STANDARD
+ *                 description: Type of market (STANDARD recommended)
+ *               endDate:
  *                 type: string
  *                 format: date-time
- *                 example: "2025-12-31T23:59:59Z"
- *               options:
- *                 type: array
- *                 items:
- *                   type: string
- *                 example: ["YES", "NO"]
+ *                 example: "2024-12-31T23:59:59Z"
+ *               minStake:
+ *                 type: number
+ *                 example: 1.0
+ *                 default: 0.1
+ *               maxStake:
+ *                 type: number
+ *                 example: 100.0
  *     responses:
  *       201:
  *         description: Market created off-chain (PENDING status)
@@ -820,17 +1024,12 @@
  *                 success:
  *                   type: boolean
  *                 data:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                     status:
- *                       type: string
- *                       example: "PENDING"
- *                     question:
- *                       type: string
+ *                   $ref: '#/components/schemas/Market'
+ *       403:
+ *         description: Not a group member
  *       429:
  *         description: Rate limited (10 markets per hour)
+ */
 
 /**
  * @swagger
@@ -873,6 +1072,7 @@
  *                     txHash:
  *                       type: string
  *                       example: "0x31bcbbf910e992de..."
+ *                       description: Transaction hash on blockchain
  *                     status:
  *                       type: string
  *                       example: "ACTIVE"
@@ -880,6 +1080,7 @@
  *         description: Market already initialized or invalid status
  *       429:
  *         description: Rate limited (3 attempts per 5 minutes per market)
+ */
 
 /**
  * @swagger
@@ -929,6 +1130,7 @@
  *                       type: number
  *       404:
  *         description: Market not found
+ */
 
 /**
  * @swagger
@@ -951,6 +1153,7 @@
  *         description: Market data synced
  *       400:
  *         description: Market not initialized on-chain
+ */
 
 /**
  * @swagger
@@ -975,6 +1178,7 @@
  *     responses:
  *       200:
  *         description: List of markets
+ */
 
 /**
  * @swagger
@@ -1011,6 +1215,352 @@
  *                       description: Minimum recommended balance
  *       401:
  *         description: Invalid admin token
+ */
+
+/**
+ * @swagger
+ * /api/admin/relay-wallet/transactions:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get relay wallet transaction history
+ *     description: Get list of transactions made by the relay wallet (requires admin token)
+ *     security:
+ *       - adminToken: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Number of transactions to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *     responses:
+ *       200:
+ *         description: Transaction history
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     transactions:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           hash:
+ *                             type: string
+ *                           type:
+ *                             type: string
+ *                             example: "initialize_market"
+ *                           marketId:
+ *                             type: string
+ *                           gasUsed:
+ *                             type: number
+ *                           timestamp:
+ *                             type: string
+ *                             format: date-time
+ *                     total:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     offset:
+ *                       type: integer
+ *       401:
+ *         description: Invalid admin token
+ */
+
+/**
+ * @swagger
+ * /api/admin/relay-wallet/monitor:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Manually trigger relay wallet monitoring
+ *     description: Check relay wallet balance and send alerts if below threshold (requires admin token)
+ *     security:
+ *       - adminToken: []
+ *     responses:
+ *       200:
+ *         description: Monitoring completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     balance:
+ *                       type: number
+ *                     status:
+ *                       type: string
+ *                       enum: [healthy, warning, critical]
+ *                     message:
+ *                       type: string
+ *       401:
+ *         description: Invalid admin token
+ */
+
+/**
+ * @swagger
+ * /api/contract/info:
+ *   get:
+ *     tags: [Contract]
+ *     summary: Get smart contract information
+ *     description: Get contract address, admin address, and market count
+ *     responses:
+ *       200:
+ *         description: Contract information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     contractAddress:
+ *                       type: string
+ *                     adminAddress:
+ *                       type: string
+ *                     marketCount:
+ *                       type: number
+ */
+
+/**
+ * @swagger
+ * /api/contract/markets/{marketId}:
+ *   get:
+ *     tags: [Contract]
+ *     summary: Get market data from blockchain
+ *     description: Fetch market state directly from smart contract
+ *     parameters:
+ *       - in: path
+ *         name: marketId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: On-chain market ID
+ *     responses:
+ *       200:
+ *         description: Market data from blockchain
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: number
+ *                     creator:
+ *                       type: string
+ *                     title:
+ *                       type: string
+ *                     status:
+ *                       type: number
+ *                     outcome:
+ *                       type: number
+ *                     yesPool:
+ *                       type: number
+ *                     noPool:
+ *                       type: number
+ */
+
+/**
+ * @swagger
+ * /api/contract/markets/{marketId}/votes/{voterAddress}:
+ *   get:
+ *     tags: [Contract]
+ *     summary: Get vote data from blockchain
+ *     description: Fetch vote information directly from smart contract
+ *     parameters:
+ *       - in: path
+ *         name: marketId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: On-chain market ID
+ *       - in: path
+ *         name: voterAddress
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Voter wallet address
+ *     responses:
+ *       200:
+ *         description: Vote data from blockchain
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     voter:
+ *                       type: string
+ *                     prediction:
+ *                       type: number
+ *                     amount:
+ *                       type: number
+ *                     hasClaimed:
+ *                       type: boolean
+ */
+
+/**
+ * @swagger
+ * /api/contract/build/create-market:
+ *   post:
+ *     tags: [Contract]
+ *     summary: Build create market transaction payload
+ *     description: Generate transaction payload for creating market on-chain (user signs and submits)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *               - endTime
+ *               - resolver
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               endTime:
+ *                 type: integer
+ *                 description: Unix timestamp
+ *               minStake:
+ *                 type: number
+ *                 description: In octas (1 MOVE = 100000000 octas)
+ *               maxStake:
+ *                 type: number
+ *               resolver:
+ *                 type: string
+ *                 description: Wallet address of resolver
+ *               marketType:
+ *                 type: integer
+ *                 enum: [0, 1]
+ *                 description: 0=STANDARD, 1=NO_LOSS
+ *     responses:
+ *       200:
+ *         description: Transaction payload generated
+ */
+
+/**
+ * @swagger
+ * /api/contract/build/place-vote:
+ *   post:
+ *     tags: [Contract]
+ *     summary: Build place vote transaction payload
+ *     description: Generate transaction payload for placing vote on-chain (user signs and submits)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - marketId
+ *               - prediction
+ *               - amount
+ *             properties:
+ *               marketId:
+ *                 type: integer
+ *                 description: On-chain market ID
+ *               prediction:
+ *                 type: integer
+ *                 enum: [1, 2]
+ *                 description: 1=YES, 2=NO
+ *               amount:
+ *                 type: number
+ *                 description: In octas (1 MOVE = 100000000 octas)
+ *     responses:
+ *       200:
+ *         description: Transaction payload generated
+ */
+
+/**
+ * @swagger
+ * /api/contract/build/resolve:
+ *   post:
+ *     tags: [Contract]
+ *     summary: Build resolve transaction payload
+ *     description: Generate transaction payload for resolving market on-chain (resolver signs and submits)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - marketId
+ *               - outcome
+ *             properties:
+ *               marketId:
+ *                 type: integer
+ *                 description: On-chain market ID
+ *               outcome:
+ *                 type: integer
+ *                 enum: [1, 2, 3]
+ *                 description: 1=YES, 2=NO, 3=INVALID
+ *     responses:
+ *       200:
+ *         description: Transaction payload generated
+ */
+
+/**
+ * @swagger
+ * /api/contract/build/claim:
+ *   post:
+ *     tags: [Contract]
+ *     summary: Build claim reward transaction payload
+ *     description: Generate transaction payload for claiming reward on-chain (user signs and submits)
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - marketId
+ *             properties:
+ *               marketId:
+ *                 type: integer
+ *                 description: On-chain market ID
+ *     responses:
+ *       200:
+ *         description: Transaction payload generated
  */
 
 

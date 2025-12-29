@@ -328,6 +328,280 @@
       "description": "Hybrid market system - create off-chain (free), vote on-chain (user pays gas)"
     },
     {
+      "name": "Predictions (Legacy)",
+      "item": [
+        {
+          "name": "List Prediction Markets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions?page=1&limit=10&status=ACTIVE",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "ACTIVE" }
+              ]
+            },
+            "description": "List all prediction markets with pagination"
+          }
+        },
+        {
+          "name": "Get Market By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/{{marketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "{{marketId}}"]
+            },
+            "description": "Get detailed information about a specific market"
+          }
+        },
+        {
+          "name": "Place Vote",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prediction\": \"YES\",\n  \"amount\": 10.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/{{marketId}}/vote",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "{{marketId}}", "vote"]
+            },
+            "description": "Place a vote on a prediction market"
+          }
+        },
+        {
+          "name": "Resolve Market",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outcome\": \"YES\",\n  \"resolutionNote\": \"Bitcoin reached $100k on Dec 15, 2024\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/{{marketId}}/resolve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "{{marketId}}", "resolve"]
+            },
+            "description": "Resolve a market (Judge/Admin only)"
+          }
+        },
+        {
+          "name": "Claim Reward",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/{{marketId}}/claim",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "{{marketId}}", "claim"]
+            },
+            "description": "Claim reward from a resolved market"
+          }
+        },
+        {
+          "name": "Get My Votes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/my-votes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "my-votes"]
+            },
+            "description": "Get current user's vote history"
+          }
+        }
+      ],
+      "description": "Legacy prediction endpoints (use Markets endpoints for new features)"
+    },
+    {
+      "name": "Contract (On-Chain)",
+      "item": [
+        {
+          "name": "Get Contract Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/contract/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contract", "info"]
+            },
+            "description": "Get smart contract information"
+          }
+        },
+        {
+          "name": "Get On-Chain Market",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/contract/markets/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contract", "markets", "1"]
+            },
+            "description": "Get market data directly from blockchain"
+          }
+        },
+        {
+          "name": "Get On-Chain Vote",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/contract/markets/1/votes/{{walletAddress}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contract", "markets", "1", "votes", "{{walletAddress}}"]
+            },
+            "description": "Get vote data directly from blockchain"
+          }
+        },
+        {
+          "name": "Build Create Market Payload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Will ETH reach $5k?\",\n  \"description\": \"Ethereum price prediction\",\n  \"endTime\": 1735689599,\n  \"minStake\": 100000000,\n  \"maxStake\": 10000000000,\n  \"resolver\": \"{{walletAddress}}\",\n  \"marketType\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contract/build/create-market",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contract", "build", "create-market"]
+            },
+            "description": "Build transaction payload for creating market on-chain"
+          }
+        },
+        {
+          "name": "Build Place Vote Payload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"marketId\": 1,\n  \"prediction\": 1,\n  \"amount\": 100000000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contract/build/place-vote",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contract", "build", "place-vote"]
+            },
+            "description": "Build transaction payload for placing vote on-chain"
+          }
+        },
+        {
+          "name": "Build Resolve Payload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"marketId\": 1,\n  \"outcome\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contract/build/resolve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contract", "build", "resolve"]
+            },
+            "description": "Build transaction payload for resolving market on-chain"
+          }
+        },
+        {
+          "name": "Build Claim Payload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"marketId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contract/build/claim",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contract", "build", "claim"]
+            },
+            "description": "Build transaction payload for claiming reward on-chain"
+          }
+        }
+      ],
+      "description": "Direct blockchain interaction endpoints"
+    },
+    {
       "name": "Admin Endpoints",
       "item": [
         {
@@ -648,6 +922,94 @@
               "path": ["api", "groups", "{{groupId}}", "members"]
             }
           }
+        },
+        {
+          "name": "Update Group",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Group Name\",\n  \"description\": \"Updated description\",\n  \"isPublic\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/{{groupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "{{groupId}}"]
+            },
+            "description": "Update group details (Admin only)"
+          }
+        },
+        {
+          "name": "Delete Group",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/{{groupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "{{groupId}}"]
+            },
+            "description": "Delete a group (Admin only)"
+          }
+        },
+        {
+          "name": "Update Member Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"JUDGE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/{{groupId}}/members/{{userId}}/role",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "{{groupId}}", "members", "{{userId}}", "role"]
+            },
+            "description": "Update member role (Admin only)"
+          }
+        },
+        {
+          "name": "Remove Member",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/{{groupId}}/members/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "{{groupId}}", "members", "{{userId}}"]
+            },
+            "description": "Remove a member from group (Admin only)"
+          }
         }
       ]
     },
@@ -679,6 +1041,77 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "upload", "image"]
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscriptions",
+      "item": [
+        {
+          "name": "Create Checkout Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"monthly\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/subscriptions/checkout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscriptions", "checkout"]
+            },
+            "description": "Create checkout session for Pro subscription"
+          }
+        },
+        {
+          "name": "Get Subscription Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/subscriptions/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscriptions", "status"]
+            },
+            "description": "Get current user's subscription status"
+          }
+        },
+        {
+          "name": "Webhook (Mock)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"plan\": \"monthly\",\n  \"transactionId\": \"tx_{{$randomUUID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/subscriptions/webhook",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscriptions", "webhook"]
+            },
+            "description": "Simulate payment webhook to activate Pro status"
           }
         }
       ]
