@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/database.js';
 import { errorResponse } from '../utils/response.js';
+import { env } from '../config/env.js';
 
 interface RateLimitConfig {
   windowMs: number; // Time window in milliseconds
@@ -14,6 +15,12 @@ interface RateLimitConfig {
  */
 export function createRateLimiter(config: RateLimitConfig) {
   return async (req: Request, res: Response, next: NextFunction) => {
+    // Skip rate limiting in development if DISABLE_RATE_LIMIT is true
+    if (env.NODE_ENV === 'development' || process.env.DISABLE_RATE_LIMIT === 'true') {
+      console.log('⚠️  Rate limiting disabled for development');
+      return next();
+    }
+
     try {
       // Determine the key based on IP or user ID
       const identifier = req.user?.id || req.ip || 'unknown';
@@ -121,6 +128,12 @@ export const marketInitializationRateLimiter = async (
   res: Response,
   next: NextFunction
 ) => {
+  // Skip rate limiting in development if DISABLE_RATE_LIMIT is true
+  if (env.NODE_ENV === 'development' || process.env.DISABLE_RATE_LIMIT === 'true') {
+    console.log('⚠️  Rate limiting disabled for development');
+    return next();
+  }
+
   try {
     const marketId = req.params.id;
     if (!marketId) {

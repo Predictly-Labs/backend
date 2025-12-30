@@ -41,6 +41,10 @@ Server runs at `http://localhost:3001`
 PORT=3001
 NODE_ENV=development
 
+# Rate Limiting (optional)
+# Set to 'true' to disable rate limiting for development/testing
+DISABLE_RATE_LIMIT=true
+
 # Database
 DATABASE_URL="postgresql://user:password@localhost:5432/predictly"
 
@@ -63,6 +67,8 @@ ADMIN_TOKEN=your_admin_token
 # Frontend (CORS)
 FRONTEND_URL=http://localhost:3000
 ```
+
+See [docs/RATE_LIMITING.md](docs/RATE_LIMITING.md) for rate limiting configuration.
 
 ## API Documentation
 
