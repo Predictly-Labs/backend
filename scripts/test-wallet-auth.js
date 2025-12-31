@@ -14,8 +14,23 @@ import { AptosAccount, AptosClient, HexString } from 'aptos';
 import fetch from 'node-fetch';
 
 // Configuration
-const BACKEND_URL = 'http://localhost:3001';
-const WALLET_PRIVATE_KEY = '0xf1f0af3f36bbf2264d53f1869a2045345d7aae779fd2087abbabab9045729fd2'; // Replace with your private key
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+const WALLET_PRIVATE_KEY = process.env.MOVEMENT_PRIVATE_KEY || 'YOUR_PRIVATE_KEY_HERE';
+
+// Validate private key is set
+if (WALLET_PRIVATE_KEY === 'YOUR_PRIVATE_KEY_HERE') {
+  console.error('❌ Error: Private key not set!');
+  console.error('\n⚠️  SECURITY WARNING: NEVER commit your private key to Git!\n');
+  console.error('Please set your private key as environment variable:');
+  console.error('\n  Linux/Mac:');
+  console.error('    export TEST_WALLET_PRIVATE_KEY="0xYOUR_PRIVATE_KEY_HERE"');
+  console.error('\n  Windows (CMD):');
+  console.error('    set TEST_WALLET_PRIVATE_KEY=0xYOUR_PRIVATE_KEY_HERE');
+  console.error('\n  Windows (PowerShell):');
+  console.error('    $env:TEST_WALLET_PRIVATE_KEY="0xYOUR_PRIVATE_KEY_HERE"');
+  console.error('\nThen run: node scripts/test-wallet-auth.js\n');
+  process.exit(1);
+}
 
 // Create Aptos account from private key
 const account = new AptosAccount(

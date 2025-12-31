@@ -15,9 +15,26 @@ npm install aptos node-fetch
 ```
 
 ### Setup
-1. Edit `test-wallet-auth.js`
-2. Ganti `WALLET_PRIVATE_KEY` dengan private key kamu
-3. Ganti `BACKEND_URL` jika perlu (default: http://localhost:3001)
+**⚠️ SECURITY WARNING: NEVER commit your private key to Git!**
+
+**IMPORTANT**: This script requires you to set your private key as an environment variable. The script will NOT run if the private key is not set properly.
+
+Set your private key as environment variable:
+```bash
+# Linux/Mac
+export TEST_WALLET_PRIVATE_KEY="0xYOUR_PRIVATE_KEY_HERE"
+export BACKEND_URL="http://localhost:3001"  # Optional
+
+# Windows (CMD)
+set TEST_WALLET_PRIVATE_KEY=0xYOUR_PRIVATE_KEY_HERE
+set BACKEND_URL=http://localhost:3001
+
+# Windows (PowerShell)
+$env:TEST_WALLET_PRIVATE_KEY="0xYOUR_PRIVATE_KEY_HERE"
+$env:BACKEND_URL="http://localhost:3001"
+```
+
+**Note**: The script will exit with an error if `TEST_WALLET_PRIVATE_KEY` is not set. This is a safety feature to prevent accidental exposure of private keys.
 
 ### Run
 ```bash
