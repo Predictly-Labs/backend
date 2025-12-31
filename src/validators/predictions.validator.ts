@@ -18,8 +18,9 @@ export const createPredictionSchema = z.object({
     .url('Invalid image URL')
     .optional()
     .nullable(),
+  // NOTE: WITH_YIELD planned for future, contract currently supports STANDARD and NO_LOSS only
   marketType: z
-    .enum(['STANDARD', 'NO_LOSS', 'WITH_YIELD'])
+    .enum(['STANDARD', 'NO_LOSS'])
     .default('STANDARD'),
   endDate: z
     .string()
@@ -68,6 +69,18 @@ export const listPredictionsQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(50).default(10),
   groupId: z.string().uuid().optional(),
   status: z.enum(['ACTIVE', 'PENDING', 'RESOLVED', 'DISPUTED', 'CANCELLED']).optional(),
+  marketType: z.enum(['STANDARD', 'NO_LOSS']).optional(), // WITH_YIELD future feature
 });
 
 export type ListPredictionsQuery = z.infer<typeof listPredictionsQuerySchema>;
+
+// My votes query schema
+export const myVotesQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  status: z.enum(['ACTIVE', 'RESOLVED', 'PENDING']).optional(),
+  groupId: z.string().uuid().optional(),
+  outcome: z.enum(['won', 'lost', 'pending']).optional(),
+});
+
+export type MyVotesQuery = z.infer<typeof myVotesQuerySchema>;

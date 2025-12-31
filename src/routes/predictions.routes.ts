@@ -6,6 +6,7 @@ import {
   placeVoteSchema,
   resolveMarketSchema,
   listPredictionsQuerySchema,
+  myVotesQuerySchema,
 } from '../validators/predictions.validator.js';
 import {
   createMarket,
@@ -15,14 +16,20 @@ import {
   resolveMarket,
   claimReward,
   getUserVotes,
+  getMyVotesStats,
+  getMyVoteOnMarket,
 } from '../controllers/predictions.controller.js';
+import { getResolvedMarkets } from '../controllers/predictions.controller.js';
 
 const router = Router();
 
 // Public routes
 router.get('/', validateQuery(listPredictionsQuerySchema), getMarkets);
-router.get('/my-votes', authMiddleware, getUserVotes);
+router.get('/my-votes', authMiddleware, validateQuery(myVotesQuerySchema), getUserVotes);
+router.get('/my-votes/stats', authMiddleware, getMyVotesStats);
+router.get('/resolved-by/:userId', getResolvedMarkets);
 router.get('/:id', optionalAuthMiddleware, getMarketById);
+router.get('/:marketId/my-vote', authMiddleware, getMyVoteOnMarket);
 
 // Protected routes
 router.post('/', authMiddleware, validateBody(createPredictionSchema), createMarket);

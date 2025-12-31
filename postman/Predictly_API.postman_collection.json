@@ -806,6 +806,316 @@
       ]
     },
     {
+      "name": "Missing API Features (v2.1)",
+      "item": [
+        {
+          "name": "Sprint 1 - Critical Features",
+          "item": [
+            {
+              "name": "Get My Groups",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/groups/my-groups?page=1&limit=20&role=MEMBER&search=crypto&sort=active",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "groups", "my-groups"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number (default: 1)"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Items per page (default: 20, max: 100)"
+                    },
+                    {
+                      "key": "role",
+                      "value": "MEMBER",
+                      "description": "Filter by role: ADMIN, JUDGE, MODERATOR, MEMBER",
+                      "disabled": true
+                    },
+                    {
+                      "key": "search",
+                      "value": "crypto",
+                      "description": "Search by group name",
+                      "disabled": true
+                    },
+                    {
+                      "key": "sort",
+                      "value": "active",
+                      "description": "Sort by: recent, active, members",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Get list of groups where the current user is a member with pagination, role filter, search, and sorting options."
+              }
+            },
+            {
+              "name": "Get My Votes (Enhanced)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/my-votes?page=1&limit=20&status=ACTIVE&groupId={{groupId}}&outcome=won",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "my-votes"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number (default: 1)"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Items per page (default: 20, max: 100)"
+                    },
+                    {
+                      "key": "status",
+                      "value": "ACTIVE",
+                      "description": "Filter by market status: ACTIVE, RESOLVED, PENDING",
+                      "disabled": true
+                    },
+                    {
+                      "key": "groupId",
+                      "value": "{{groupId}}",
+                      "description": "Filter by group ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "outcome",
+                      "value": "won",
+                      "description": "Filter by outcome: won, lost, pending",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Get current user's vote history with enhanced pagination and filters (status, groupId, outcome)."
+              }
+            },
+            {
+              "name": "Check My Vote on Market",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/{{marketId}}/my-vote",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "{{marketId}}", "my-vote"]
+                },
+                "description": "Check if current user has voted on a specific market. Returns vote details or null if no vote exists."
+              }
+            }
+          ],
+          "description": "Sprint 1: Critical features - My Groups, Enhanced My Votes, Check My Vote"
+        },
+        {
+          "name": "Sprint 2 - High Priority",
+          "item": [
+            {
+              "name": "Get Group Members (with Role Filter)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/groups/{{groupId}}/members?role=JUDGE",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "groups", "{{groupId}}", "members"],
+                  "query": [
+                    {
+                      "key": "role",
+                      "value": "JUDGE",
+                      "description": "Filter by role: ADMIN, JUDGE, MODERATOR, MEMBER",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Get group members with optional role filter. Enhanced version of existing endpoint."
+              }
+            },
+            {
+              "name": "Get My Votes Statistics",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/my-votes/stats",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "my-votes", "stats"]
+                },
+                "description": "Get aggregate statistics for current user's votes including total votes, invested, earnings, ROI, win rate, and stats grouped by group."
+              }
+            },
+            {
+              "name": "List Markets (with Type Filter)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions?page=1&limit=10&status=ACTIVE&marketType=NO_LOSS",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "status",
+                      "value": "ACTIVE"
+                    },
+                    {
+                      "key": "marketType",
+                      "value": "NO_LOSS",
+                      "description": "Filter by type: STANDARD, NO_LOSS (WITH_YIELD future feature)",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "List prediction markets with market type filter. Enhanced version of existing endpoint."
+              }
+            }
+          ],
+          "description": "Sprint 2: High priority features - Role filter, Vote statistics, Market type filter"
+        },
+        {
+          "name": "Sprint 3 - Polish Features",
+          "item": [
+            {
+              "name": "Get Group Settings",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/groups/{{groupId}}/settings",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "groups", "{{groupId}}", "settings"]
+                },
+                "description": "Get group settings including default market type and allowed market types."
+              }
+            },
+            {
+              "name": "Update Group Settings",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"defaultMarketType\": \"NO_LOSS\",\n  \"allowedMarketTypes\": [\"STANDARD\", \"NO_LOSS\"]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/groups/{{groupId}}/settings",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "groups", "{{groupId}}", "settings"]
+                },
+                "description": "Update group settings (Admin only). Configure default market type and allowed market types for the group."
+              }
+            },
+            {
+              "name": "Get Judge Resolution History",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/resolved-by/{{userId}}?page=1&limit=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "resolved-by", "{{userId}}"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number (default: 1)"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Items per page (default: 20)"
+                    }
+                  ]
+                },
+                "description": "Get list of markets resolved by a specific judge with pagination."
+              }
+            },
+            {
+              "name": "Bulk Assign Judges",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userIds\": [\n    \"user-id-1\",\n    \"user-id-2\",\n    \"user-id-3\"\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/groups/{{groupId}}/judges/bulk",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "groups", "{{groupId}}", "judges", "bulk"]
+                },
+                "description": "Assign multiple users as judges in a group (Admin only). Returns success/failure for each user."
+              }
+            }
+          ],
+          "description": "Sprint 3: Polish features - Group settings, Judge history, Bulk judge assignment"
+        }
+      ],
+      "description": "New endpoints added in v2.1.0 - Missing API Features Implementation (10 new/enhanced endpoints)"
+    },
+    {
       "name": "Groups",
       "item": [
         {

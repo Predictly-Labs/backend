@@ -738,7 +738,8 @@
  *             - RESOLVED: Market outcome determined
  *         marketType:
  *           type: string
- *           enum: [STANDARD, NO_LOSS, WITH_YIELD]
+ *           enum: [STANDARD, NO_LOSS]
+ *           description: Market type (WITH_YIELD planned for future)
  *         endDate:
  *           type: string
  *           format: date-time
@@ -818,8 +819,9 @@
  *                 type: string
  *               marketType:
  *                 type: string
- *                 enum: [STANDARD, NO_LOSS, WITH_YIELD]
+ *                 enum: [STANDARD, NO_LOSS]
  *                 default: STANDARD
+ *                 description: Market type (WITH_YIELD planned for future)
  *               endDate:
  *                 type: string
  *                 format: date-time
@@ -999,9 +1001,9 @@
  *                 example: "Bitcoin price prediction market"
  *               marketType:
  *                 type: string
- *                 enum: [STANDARD, NO_LOSS, WITH_YIELD]
+ *                 enum: [STANDARD, NO_LOSS]
  *                 default: STANDARD
- *                 description: Type of market (STANDARD recommended)
+ *                 description: Type of market - STANDARD or NO_LOSS (WITH_YIELD planned for future)
  *               endDate:
  *                 type: string
  *                 format: date-time
@@ -1655,4 +1657,514 @@
  *     responses:
  *       200:
  *         description: Subscription activated
+ */
+
+
+/**
+ * @swagger
+ * /api/groups/my-groups:
+ *   get:
+ *     tags: [Groups]
+ *     summary: Get user's groups
+ *     description: |
+ *       Get list of groups where the current user is a member with pagination and filters.
+ *       
+ *       **New Endpoint - Sprint 1**
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *         description: Items per page
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [ADMIN, JUDGE, MODERATOR, MEMBER]
+ *         description: Filter by user's role in groups
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by group name
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [recent, active, members]
+ *         description: Sort by recent join, active markets, or member count
+ *     responses:
+ *       200:
+ *         description: List of user's groups with stats
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       iconUrl:
+ *                         type: string
+ *                       isPublic:
+ *                         type: boolean
+ *                       userRole:
+ *                         type: string
+ *                         enum: [ADMIN, JUDGE, MODERATOR, MEMBER]
+ *                       joinedAt:
+ *                         type: string
+ *                         format: date-time
+ *                       stats:
+ *                         type: object
+ *                         properties:
+ *                           memberCount:
+ *                             type: integer
+ *                           activeMarkets:
+ *                             type: integer
+ *                           totalVolume:
+ *                             type: number
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     totalPages:
+ *                       type: integer
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/predictions/my-votes/stats:
+ *   get:
+ *     tags: [Predictions]
+ *     summary: Get user's vote statistics
+ *     description: |
+ *       Get aggregate statistics for current user's votes including ROI, win rate, and earnings.
+ *       
+ *       **New Endpoint - Sprint 2**
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Vote statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalVotes:
+ *                       type: integer
+ *                       example: 42
+ *                     totalInvested:
+ *                       type: number
+ *                       example: 420.0
+ *                     totalEarnings:
+ *                       type: number
+ *                       example: 525.50
+ *                     roi:
+ *                       type: number
+ *                       example: 0.2512
+ *                       description: Return on investment (decimal)
+ *                     winRate:
+ *                       type: number
+ *                       example: 0.6667
+ *                       description: Win rate (decimal)
+ *                     activeVotes:
+ *                       type: integer
+ *                       example: 15
+ *                     resolvedVotes:
+ *                       type: integer
+ *                       example: 27
+ *                     wonVotes:
+ *                       type: integer
+ *                       example: 18
+ *                     lostVotes:
+ *                       type: integer
+ *                       example: 9
+ *                     averageStake:
+ *                       type: number
+ *                       example: 10.0
+ *                     byGroup:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           groupId:
+ *                             type: string
+ *                           groupName:
+ *                             type: string
+ *                           votes:
+ *                             type: integer
+ *                           earnings:
+ *                             type: number
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/predictions/{marketId}/my-vote:
+ *   get:
+ *     tags: [Predictions]
+ *     summary: Check user's vote on specific market
+ *     description: |
+ *       Check if current user has voted on a specific market and get vote details.
+ *       
+ *       **New Endpoint - Sprint 1**
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: marketId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Market ID
+ *     responses:
+ *       200:
+ *         description: Vote details or null if not voted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   oneOf:
+ *                     - type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         marketId:
+ *                           type: string
+ *                         prediction:
+ *                           type: string
+ *                           enum: [YES, NO]
+ *                         amount:
+ *                           type: number
+ *                         createdAt:
+ *                           type: string
+ *                           format: date-time
+ *                         hasClaimedReward:
+ *                           type: boolean
+ *                         rewardAmount:
+ *                           type: number
+ *                           nullable: true
+ *                         market:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                             title:
+ *                               type: string
+ *                             status:
+ *                               type: string
+ *                             outcome:
+ *                               type: string
+ *                               nullable: true
+ *                     - type: "null"
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Market not found
+ */
+
+/**
+ * @swagger
+ * /api/predictions/resolved-by/{userId}:
+ *   get:
+ *     tags: [Predictions]
+ *     summary: Get markets resolved by a judge
+ *     description: |
+ *       Get list of markets resolved by a specific user (judge history).
+ *       
+ *       **New Endpoint - Sprint 3**
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: User ID (judge)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: List of resolved markets
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       onChainId:
+ *                         type: string
+ *                       title:
+ *                         type: string
+ *                       status:
+ *                         type: string
+ *                       outcome:
+ *                         type: string
+ *                       resolvedAt:
+ *                         type: string
+ *                         format: date-time
+ *                       resolutionNote:
+ *                         type: string
+ *                       participantCount:
+ *                         type: integer
+ *                       group:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                       creator:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           displayName:
+ *                             type: string
+ *                           avatarUrl:
+ *                             type: string
+ *                 pagination:
+ *                   type: object
+ */
+
+/**
+ * @swagger
+ * /api/groups/{id}/settings:
+ *   get:
+ *     tags: [Groups]
+ *     summary: Get group settings
+ *     description: |
+ *       Get group settings including default market type and allowed market types.
+ *       
+ *       **New Endpoint - Sprint 3**
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Group ID
+ *     responses:
+ *       200:
+ *         description: Group settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     defaultMarketType:
+ *                       type: string
+ *                       enum: [STANDARD, NO_LOSS]
+ *                       description: Default market type (WITH_YIELD planned for future)
+ *                     allowedMarketTypes:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                         enum: [STANDARD, NO_LOSS]
+ *                       description: Allowed market types (WITH_YIELD planned for future)
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Group not found
+ *   put:
+ *     tags: [Groups]
+ *     summary: Update group settings
+ *     description: |
+ *       Update group settings (Admin only).
+ *       
+ *       **New Endpoint - Sprint 3**
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Group ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               defaultMarketType:
+ *                 type: string
+ *                 enum: [STANDARD, NO_LOSS]
+ *                 description: Default market type (WITH_YIELD planned for future)
+ *               allowedMarketTypes:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   enum: [STANDARD, NO_LOSS]
+ *                 description: Allowed market types (WITH_YIELD planned for future)
+ *     responses:
+ *       200:
+ *         description: Settings updated successfully
+ *       400:
+ *         description: Invalid settings (e.g., defaultMarketType not in allowedMarketTypes)
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Only admins can update settings
+ *       404:
+ *         description: Group not found
+ */
+
+/**
+ * @swagger
+ * /api/groups/{groupId}/judges/bulk:
+ *   post:
+ *     tags: [Groups]
+ *     summary: Bulk assign judges
+ *     description: |
+ *       Assign multiple users as judges in a group (Admin only).
+ *       
+ *       **New Endpoint - Sprint 3**
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: groupId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Group ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userIds
+ *             properties:
+ *               userIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: uuid
+ *                 minItems: 1
+ *                 example: ["uuid-1", "uuid-2", "uuid-3"]
+ *     responses:
+ *       200:
+ *         description: Bulk assignment completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     successful:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           role:
+ *                             type: string
+ *                           user:
+ *                             type: object
+ *                             properties:
+ *                               id:
+ *                                 type: string
+ *                               displayName:
+ *                                 type: string
+ *                     failed:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           userId:
+ *                             type: string
+ *                           error:
+ *                             type: string
+ *                     summary:
+ *                       type: object
+ *                       properties:
+ *                         total:
+ *                           type: integer
+ *                         succeeded:
+ *                           type: integer
+ *                         failed:
+ *                           type: integer
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Only admins can assign judges
  */

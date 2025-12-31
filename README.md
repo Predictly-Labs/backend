@@ -70,11 +70,26 @@ FRONTEND_URL=http://localhost:3000
 
 See [docs/RATE_LIMITING.md](docs/RATE_LIMITING.md) for rate limiting configuration.
 
-## API Documentation
+## Documentation
 
+### API Documentation
 Interactive API docs (Swagger UI): `http://localhost:3001/api`
 
 Production: `https://backend-3ufs.onrender.com/api`
+
+### New Endpoints Documentation
+- [New Endpoints Guide](docs/NEW_ENDPOINTS.md) - Complete guide for all new endpoints added
+
+### Feature Documentation
+- [Missing Features Summary](docs/FEATURES_SUMMARY.md) - Overview of missing features
+- [Implementation Plan](docs/MISSING_FEATURES_PLAN.md) - Detailed implementation guide
+- [Quick Reference](docs/MISSING_FEATURES_QUICK_REF.md) - Quick reference for developers
+
+### Other Documentation
+- [Rate Limiting](docs/RATE_LIMITING.md) - Rate limiting configuration
+- [Frontend Fix](docs/FRONTEND_FIX.md) - Frontend authentication fixes
+- [Deployment Checklist](docs/DEPLOYMENT_CHECKLIST.md) - Deployment guide
+- [Nightly Wallet Testing](docs/NIGHTLY_WALLET_TESTING.md) - Wallet testing guide
 
 ## Endpoints
 
@@ -109,13 +124,17 @@ Production: `https://backend-3ufs.onrender.com/api`
 |--------|----------|------|-------------|
 | POST | `/api/groups` | Yes | Create new group |
 | GET | `/api/groups` | No | List public groups |
+| GET | `/api/groups/my-groups` | Yes | Get user's groups with filters |
 | GET | `/api/groups/:id` | Yes | Get group details |
 | PUT | `/api/groups/:id` | Yes | Update group (admin) |
 | DELETE | `/api/groups/:id` | Yes | Delete group (admin) |
 | POST | `/api/groups/join` | Yes | Join with invite code |
-| GET | `/api/groups/:groupId/members` | No | List group members |
+| GET | `/api/groups/:groupId/members` | No | List group members (with role filter) |
 | PUT | `/api/groups/:gid/members/:uid/role` | Yes | Update member role (admin) |
 | DELETE | `/api/groups/:gid/members/:uid` | Yes | Remove member (admin) |
+| GET | `/api/groups/:id/settings` | Yes | Get group settings |
+| PUT | `/api/groups/:id/settings` | Yes | Update group settings (admin) |
+| POST | `/api/groups/:gid/judges/bulk` | Yes | Bulk assign judges (admin) |
 
 ### Markets (Hybrid System)
 | Method | Endpoint | Auth | Description |
@@ -147,13 +166,16 @@ Production: `https://backend-3ufs.onrender.com/api`
 ### Predictions (Legacy)
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/predictions` | No | List prediction markets |
+| GET | `/api/predictions` | No | List prediction markets (with marketType filter) |
 | POST | `/api/predictions` | Yes | Create new market |
 | GET | `/api/predictions/:id` | Optional | Get market details |
 | POST | `/api/predictions/:id/vote` | Yes | Place a vote |
 | POST | `/api/predictions/:id/resolve` | Yes | Resolve market (Judge/Admin) |
 | POST | `/api/predictions/:id/claim` | Yes | Claim reward |
-| GET | `/api/predictions/my-votes` | Yes | Get user's vote history |
+| GET | `/api/predictions/my-votes` | Yes | Get user's votes (with pagination & filters) |
+| GET | `/api/predictions/my-votes/stats` | Yes | Get user's vote statistics |
+| GET | `/api/predictions/:marketId/my-vote` | Yes | Check vote on specific market |
+| GET | `/api/predictions/resolved-by/:userId` | No | Get markets resolved by judge |
 
 ### Subscriptions
 | Method | Endpoint | Auth | Description |

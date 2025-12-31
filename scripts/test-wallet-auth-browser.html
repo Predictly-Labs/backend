@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aptos Wallet Authentication Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    
+    .step {
+      background: #f8f9fa;
+      border-left: 4px solid #667eea;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+    
+    .step h3 {
+      color: #667eea;
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+    
+    .step-content {
+      color: #555;
+      line-height: 1.6;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 10px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .output {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 20px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 20px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    
+    .success {
+      color: #4ade80;
+    }
+    
+    .error {
+      color: #f87171;
+    }
+    
+    .info {
+      color: #60a5fa;
+    }
+    
+    .warning {
+      color: #fbbf24;
+    }
+    
+    .token-box {
+      background: #f0fdf4;
+      border: 2px solid #4ade80;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      display: none;
+    }
+    
+    .token-box.show {
+      display: block;
+    }
+    
+    .token-box h4 {
+      color: #166534;
+      margin-bottom: 10px;
+    }
+    
+    .token-box code {
+      background: white;
+      padding: 10px;
+      border-radius: 4px;
+      display: block;
+      word-break: break-all;
+      color: #333;
+      font-size: 12px;
+    }
+    
+    .copy-btn {
+      background: #4ade80;
+      padding: 8px 16px;
+      font-size: 14px;
+      margin-top: 10px;
+      width: auto;
+    }
+    
+    .input-group {
+      margin-bottom: 15px;
+    }
+    
+    .input-group label {
+      display: block;
+      color: #555;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+    
+    .input-group input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    
+    .input-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔐 Aptos Wallet Authentication</h1>
+    <p class="subtitle">Test wallet authentication with your backend API</p>
+    
+    <div class="input-group">
+      <label for="backendUrl">Backend URL:</label>
+      <input type="text" id="backendUrl" value="http://localhost:3001" placeholder="http://localhost:3001">
+    </div>
+    
+    <div class="step">
+      <h3>Step 1: Connect Wallet</h3>
+      <div class="step-content">
+        <p>Connect your Aptos wallet (Petra, Martian, etc.)</p>
+        <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+      </div>
+    </div>
+    
+    <div class="step">
+      <h3>Step 2: Get Sign-In Message</h3>
+      <div class="step-content">
+        <p>Request a message from the backend to sign</p>
+        <button id="getMessageBtn" onclick="getSignInMessage()" disabled>Get Message</button>
+      </div>
+    </div>
+    
+    <div class="step">
+      <h3>Step 3: Sign & Verify</h3>
+      <div class="step-content">
+        <p>Sign the message and verify with backend</p>
+        <button id="signBtn" onclick="signAndVerify()" disabled>Sign & Verify</button>
+      </div>
+    </div>
+    
+    <div class="output" id="output"></div>
+    
+    <div class="token-box" id="tokenBox">
+      <h4>✅ JWT Token (Bearer Token)</h4>
+      <code id="tokenValue"></code>
+      <button class="copy-btn" onclick="copyToken()">Copy Token</button>
+    </div>
+  </div>
+
+  <script>
+    let wallet = null;
+    let walletAddress = null;
+    let message = null;
+    let nonce = null;
+    let jwtToken = null;
+    
+    function log(text, type = 'info') {
+      const output = document.getElementById('output');
+      const colors = {
+        success: 'success',
+        error: 'error',
+        info: 'info',
+        warning: 'warning'
+      };
+      output.innerHTML += `<span class="${colors[type]}">${text}</span>\n`;
+      output.scrollTop = output.scrollHeight;
+    }
+    
+    function clearLog() {
+      document.getElementById('output').innerHTML = '';
+    }
+    
+    async function connectWallet() {
+      clearLog();
+      log('🔌 Connecting to wallet...', 'info');
+      
+      try {
+        // Check if wallet is installed
+        if (!window.aptos) {
+          log('❌ No Aptos wallet found!', 'error');
+          log('💡 Please install Petra or Martian wallet', 'warning');
+          return;
+        }
+        
+        // Connect to wallet
+        const response = await window.aptos.connect();
+        walletAddress = response.address;
+        wallet = window.aptos;
+        
+        log(`✅ Wallet connected!`, 'success');
+        log(`   Address: ${walletAddress}`, 'info');
+        
+        // Enable next step
+        document.getElementById('getMessageBtn').disabled = false;
+        document.getElementById('connectBtn').textContent = '✅ Connected';
+        document.getElementById('connectBtn').disabled = true;
+        
+      } catch (error) {
+        log(`❌ Error: ${error.message}`, 'error');
+      }
+    }
+    
+    async function getSignInMessage() {
+      clearLog();
+      log('📝 Requesting sign-in message...', 'info');
+      
+      const backendUrl = document.getElementById('backendUrl').value;
+      
+      try {
+        const response = await fetch(`${backendUrl}/api/auth/wallet/message`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            walletAddress: walletAddress,
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.message);
+        }
+        
+        message = data.data.message;
+        nonce = data.data.nonce;
+        
+        log('✅ Message received!', 'success');
+        log(`   Nonce: ${nonce}`, 'info');
+        log(`   Expires: ${data.data.expiresAt}`, 'info');
+        log(`   Message: ${message.substring(0, 100)}...`, 'info');
+        
+        // Enable next step
+        document.getElementById('signBtn').disabled = false;
+        document.getElementById('getMessageBtn').textContent = '✅ Message Received';
+        document.getElementById('getMessageBtn').disabled = true;
+        
+      } catch (error) {
+        log(`❌ Error: ${error.message}`, 'error');
+      }
+    }
+    
+    async function signAndVerify() {
+      clearLog();
+      log('✍️  Signing message...', 'info');
+      
+      const backendUrl = document.getElementById('backendUrl').value;
+      
+      try {
+        // Sign the message with wallet
+        const signResponse = await wallet.signMessage({
+          message: message,
+          nonce: nonce,
+        });
+        
+        log('✅ Message signed!', 'success');
+        log(`   Signature: ${signResponse.signature.substring(0, 50)}...`, 'info');
+        log(`   Public Key: ${signResponse.publicKey}`, 'info');
+        
+        // Verify signature with backend
+        log('\n🔐 Verifying signature...', 'info');
+        
+        const verifyResponse = await fetch(`${backendUrl}/api/auth/wallet/verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            walletAddress: walletAddress,
+            signature: signResponse.signature,
+            publicKey: signResponse.publicKey,
+            message: message,
+          }),
+        });
+        
+        const data = await verifyResponse.json();
+        
+        if (!data.success) {
+          throw new Error(data.message);
+        }
+        
+        jwtToken = data.data.token;
+        
+        log('\n✅ Verification successful!', 'success');
+        log(`   User ID: ${data.data.user.id}`, 'info');
+        log(`   Display Name: ${data.data.user.displayName}`, 'info');
+        log(`   Token: ${jwtToken.substring(0, 50)}...`, 'info');
+        
+        // Show token box
+        document.getElementById('tokenValue').textContent = jwtToken;
+        document.getElementById('tokenBox').classList.add('show');
+        
+        document.getElementById('signBtn').textContent = '✅ Authenticated';
+        document.getElementById('signBtn').disabled = true;
+        
+        log('\n🎉 Authentication complete!', 'success');
+        log('💡 You can now use this token to test the API endpoints', 'warning');
+        
+      } catch (error) {
+        log(`❌ Error: ${error.message}`, 'error');
+        console.error(error);
+      }
+    }
+    
+    function copyToken() {
+      const tokenValue = document.getElementById('tokenValue').textContent;
+      navigator.clipboard.writeText(tokenValue);
+      
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => {
+        btn.textContent = originalText;
+      }, 2000);
+    }
+  </script>
+</body>
+</html>

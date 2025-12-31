@@ -75,3 +75,38 @@ export const listGroupsQuerySchema = z.object({
 });
 
 export type ListGroupsQuery = z.infer<typeof listGroupsQuerySchema>;
+
+// My groups query schema
+export const myGroupsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  role: z.enum(['ADMIN', 'JUDGE', 'MODERATOR', 'MEMBER']).optional(),
+  search: z.string().optional(),
+  sort: z.enum(['recent', 'active', 'members']).optional(),
+});
+
+export type MyGroupsQuery = z.infer<typeof myGroupsQuerySchema>;
+
+// Group members query schema
+export const groupMembersQuerySchema = z.object({
+  role: z.enum(['ADMIN', 'JUDGE', 'MODERATOR', 'MEMBER']).optional(),
+});
+
+export type GroupMembersQuery = z.infer<typeof groupMembersQuerySchema>;
+
+// Group settings schema
+// NOTE: WITH_YIELD is planned for future but not yet implemented in smart contract
+// Contract currently only supports: STANDARD (0) and NO_LOSS (1)
+export const groupSettingsSchema = z.object({
+  defaultMarketType: z.enum(['STANDARD', 'NO_LOSS']).optional(),
+  allowedMarketTypes: z.array(z.enum(['STANDARD', 'NO_LOSS'])).optional(),
+});
+
+export type GroupSettingsInput = z.infer<typeof groupSettingsSchema>;
+
+// Bulk assign judges schema
+export const bulkAssignJudgesSchema = z.object({
+  userIds: z.array(z.string().uuid('Invalid user ID')).min(1, 'At least one user ID is required'),
+});
+
+export type BulkAssignJudgesInput = z.infer<typeof bulkAssignJudgesSchema>;

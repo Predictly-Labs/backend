@@ -54,6 +54,10 @@ model Group {
   inviteCode  String  @unique
   isPublic    Boolean @default(true)
 
+  // Settings
+  defaultMarketType  MarketType   @default(STANDARD)
+  allowedMarketTypes MarketType[] @default([STANDARD, NO_LOSS])
+
   createdById String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -64,12 +64,13 @@ export async function createMarket(req: Request, res: Response) {
  * GET /api/predictions
  */
 export async function getMarkets(req: Request, res: Response) {
-  const { page, limit, groupId, status } = req.query as unknown as ListPredictionsQuery;
+  const { page, limit, groupId, status, marketType } = req.query as unknown as ListPredictionsQuery;
   const skip = (page - 1) * limit;
 
   const where = {
     ...(groupId && { groupId }),
     ...(status && { status }),
+    ...(marketType && { marketType }),
   };
 
   const [markets, total] = await Promise.all([
@@ -382,14 +383,119 @@ export async function claimReward(req: Request, res: Response) {
 }
 
 /**
- * Get user's votes
- * GET /api/predictions/my-votes
+ * Get user's vote statistics
+ * GET /api/predictions/my-votes/stats
  */
-export async function getUserVotes(req: Request, res: Response) {
+export async function getMyVotesStats(req: Request, res: Response) {
   const userId = req.user!.id;
 
+  // Fetch all user votes with market and group details
   const votes = await prisma.vote.findMany({
     where: { userId },
+    include: {
+      market: {
+        include: {
+          group: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // Calculate aggregates
+  const totalVotes = votes.length;
+  const totalInvested = votes.reduce((sum, v) => sum + v.amount, 0);
+  const totalEarnings = votes.reduce((sum, v) => sum + (v.rewardAmount || 0), 0);
+  
+  const resolvedVotes = votes.filter(v => v.market.status === 'RESOLVED');
+  const activeVotes = votes.filter(v => v.market.status === 'ACTIVE');
+  
+  const wonVotes = resolvedVotes.filter(v => 
+    (v.prediction === 'YES' && v.market.outcome === 'YES') ||
+    (v.prediction === 'NO' && v.market.outcome === 'NO')
+  );
+  
+  const lostVotes = resolvedVotes.filter(v => 
+    (v.prediction === 'YES' && v.market.outcome === 'NO') ||
+    (v.prediction === 'NO' && v.market.outcome === 'YES')
+  );
+
+  // Calculate ROI and win rate
+  const roi = totalInvested > 0 ? (totalEarnings - totalInvested) / totalInvested : 0;
+  const winRate = resolvedVotes.length > 0 ? wonVotes.length / resolvedVotes.length : 0;
+  const averageStake = totalVotes > 0 ? totalInvested / totalVotes : 0;
+
+  // Group statistics by group
+  const groupMap = new Map<string, { groupId: string; groupName: string; votes: number; earnings: number }>();
+  
+  votes.forEach(vote => {
+    const groupId = vote.market.groupId;
+    const groupName = vote.market.group.name;
+    const earnings = vote.rewardAmount || 0;
+    
+    if (groupMap.has(groupId)) {
+      const existing = groupMap.get(groupId)!;
+      existing.votes += 1;
+      existing.earnings += earnings;
+    } else {
+      groupMap.set(groupId, {
+        groupId,
+        groupName,
+        votes: 1,
+        earnings,
+      });
+    }
+  });
+
+  const byGroup = Array.from(groupMap.values());
+
+  const stats = {
+    totalVotes,
+    totalInvested,
+    totalEarnings,
+    roi,
+    winRate,
+    activeVotes: activeVotes.length,
+    resolvedVotes: resolvedVotes.length,
+    wonVotes: wonVotes.length,
+    lostVotes: lostVotes.length,
+    averageStake,
+    byGroup,
+  };
+
+  return successResponse(res, stats, 'Statistics retrieved successfully');
+}
+
+/**
+ * Check user's vote on a specific market
+ * GET /api/predictions/:marketId/my-vote
+ */
+export async function getMyVoteOnMarket(req: Request, res: Response) {
+  const { marketId } = req.params;
+  const userId = req.user!.id;
+
+  // Check if market exists
+  const market = await prisma.predictionMarket.findUnique({
+    where: { id: marketId },
+    select: { id: true, title: true, status: true, outcome: true },
+  });
+
+  if (!market) {
+    return notFoundResponse(res, 'Market not found');
+  }
+
+  // Get user's vote on this market
+  const vote = await prisma.vote.findUnique({
+    where: {
+      marketId_userId: {
+        marketId,
+        userId,
+      },
+    },
     include: {
       market: {
         select: {
@@ -397,16 +503,86 @@ export async function getUserVotes(req: Request, res: Response) {
           title: true,
           status: true,
           outcome: true,
-          endDate: true,
         },
       },
     },
-    orderBy: { createdAt: 'desc' },
   });
+
+  // Return null if user hasn't voted
+  if (!vote) {
+    return successResponse(res, null, 'No vote found for this market');
+  }
+
+  return successResponse(res, vote, 'Vote retrieved successfully');
+}
+
+/**
+ * Get user's votes
+ * GET /api/predictions/my-votes
+ */
+export async function getUserVotes(req: Request, res: Response) {
+  const userId = req.user!.id;
+  const { page, limit, status, groupId, outcome } = req.query as any;
+  
+  // Parse query parameters with defaults
+  const pageNum = page ? parseInt(page) : 1;
+  const limitNum = limit ? parseInt(limit) : 20;
+  const skip = (pageNum - 1) * limitNum;
+
+  // Build where clause
+  const where: any = {
+    userId,
+    ...(groupId && {
+      market: {
+        groupId,
+        ...(status && { status }),
+      },
+    }),
+    ...(!groupId && status && {
+      market: { status },
+    }),
+  };
+
+  // Handle outcome filter
+  if (outcome === 'won' || outcome === 'lost') {
+    where.market = {
+      ...where.market,
+      status: 'RESOLVED',
+      outcome: { not: null },
+    };
+  } else if (outcome === 'pending') {
+    where.market = {
+      ...where.market,
+      status: { in: ['ACTIVE', 'PENDING'] },
+    };
+  }
+
+  // Fetch votes with pagination
+  const [votes, total] = await Promise.all([
+    prisma.vote.findMany({
+      where,
+      skip,
+      take: limitNum,
+      include: {
+        market: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            outcome: true,
+            endDate: true,
+            groupId: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.vote.count({ where }),
+  ]);
 
   // Calculate mock yield for each vote
   const DAILY_YIELD_RATE = 0.05 / 365;
-  const votesWithYield = votes.map((vote) => {
+  let votesWithYield = votes.map((vote) => {
     const daysSinceVote = Math.floor(
       (Date.now() - vote.createdAt.getTime()) / (1000 * 60 * 60 * 24)
     );
@@ -419,5 +595,88 @@ export async function getUserVotes(req: Request, res: Response) {
     };
   });
 
-  return successResponse(res, votesWithYield);
+  // Filter by outcome if specified
+  if (outcome === 'won') {
+    votesWithYield = votesWithYield.filter(
+      (vote) =>
+        (vote.prediction === 'YES' && vote.market.outcome === 'YES') ||
+        (vote.prediction === 'NO' && vote.market.outcome === 'NO')
+    );
+  } else if (outcome === 'lost') {
+    votesWithYield = votesWithYield.filter(
+      (vote) =>
+        (vote.prediction === 'YES' && vote.market.outcome === 'NO') ||
+        (vote.prediction === 'NO' && vote.market.outcome === 'YES')
+    );
+  }
+
+  return successResponse(res, votesWithYield, undefined, 200, {
+    page: pageNum,
+    limit: limitNum,
+    total,
+    totalPages: Math.ceil(total / limitNum),
+  });
+}
+
+
+/**
+ * Get markets resolved by a specific user (judge history)
+ * GET /api/predictions/resolved-by/:userId
+ */
+export async function getResolvedMarkets(req: Request, res: Response) {
+  const { userId } = req.params;
+  const { page = '1', limit = '20' } = req.query;
+  
+  const pageNum = parseInt(page as string);
+  const limitNum = parseInt(limit as string);
+  const skip = (pageNum - 1) * limitNum;
+
+  // Fetch markets resolved by this user
+  const [markets, total] = await Promise.all([
+    prisma.predictionMarket.findMany({
+      where: {
+        resolvedById: userId,
+        status: 'RESOLVED',
+      },
+      skip,
+      take: limitNum,
+      orderBy: { resolvedAt: 'desc' },
+      include: {
+        group: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+        _count: {
+          select: { votes: true },
+        },
+      },
+    }),
+    prisma.predictionMarket.count({
+      where: {
+        resolvedById: userId,
+        status: 'RESOLVED',
+      },
+    }),
+  ]);
+
+  const result = markets.map((m) => ({
+    ...m,
+    participantCount: m._count.votes,
+  }));
+
+  return successResponse(res, result, undefined, 200, {
+    page: pageNum,
+    limit: limitNum,
+    total,
+    totalPages: Math.ceil(total / limitNum),
+  });
 }
