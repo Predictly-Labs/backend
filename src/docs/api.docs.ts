@@ -1662,6 +1662,164 @@
 
 /**
  * @swagger
+ * /api/wallet/balance/{address}:
+ *   get:
+ *     tags: [Wallet]
+ *     summary: Get wallet balance by address
+ *     description: |
+ *       Check MOVE token balance for any wallet address. No authentication required.
+ *       
+ *       **New Endpoint - Wallet Balance API**
+ *     parameters:
+ *       - in: path
+ *         name: address
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Wallet address (must start with 0x)
+ *         example: "0x9161980be9b78e96ddae98ceb289f6f4cda5e4af70667667ff9af8438a94e565"
+ *     responses:
+ *       200:
+ *         description: Wallet balance retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     address:
+ *                       type: string
+ *                       example: "0x9161980be9b78e96ddae98ceb289f6f4cda5e4af70667667ff9af8438a94e565"
+ *                     balance:
+ *                       type: number
+ *                       example: 125.5432
+ *                       description: Balance in MOVE tokens
+ *                     unit:
+ *                       type: string
+ *                       example: "MOVE"
+ *       400:
+ *         description: Invalid wallet address format
+ *       503:
+ *         description: Movement RPC temporarily unavailable
+ *       500:
+ *         description: Failed to fetch wallet balance
+ */
+
+/**
+ * @swagger
+ * /api/wallet/balance/{address}/detailed:
+ *   get:
+ *     tags: [Wallet]
+ *     summary: Get detailed wallet balance by address
+ *     description: |
+ *       Check wallet balance with detailed format including MOVE, octas, and formatted string.
+ *       No authentication required.
+ *       
+ *       **New Endpoint - Wallet Balance API**
+ *     parameters:
+ *       - in: path
+ *         name: address
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Wallet address (must start with 0x)
+ *         example: "0x9161980be9b78e96ddae98ceb289f6f4cda5e4af70667667ff9af8438a94e565"
+ *     responses:
+ *       200:
+ *         description: Detailed wallet balance retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     address:
+ *                       type: string
+ *                       example: "0x9161980be9b78e96ddae98ceb289f6f4cda5e4af70667667ff9af8438a94e565"
+ *                     balance:
+ *                       type: object
+ *                       properties:
+ *                         move:
+ *                           type: number
+ *                           example: 125.5432
+ *                           description: Balance in MOVE tokens
+ *                         octas:
+ *                           type: string
+ *                           example: "12554320000"
+ *                           description: Balance in octas (1 MOVE = 100,000,000 octas)
+ *                         formatted:
+ *                           type: string
+ *                           example: "125.5432 MOVE"
+ *                           description: Human-readable formatted balance
+ *       400:
+ *         description: Invalid wallet address format
+ *       503:
+ *         description: Movement RPC temporarily unavailable
+ *       500:
+ *         description: Failed to fetch wallet balance
+ */
+
+/**
+ * @swagger
+ * /api/wallet/balance/me:
+ *   get:
+ *     tags: [Wallet]
+ *     summary: Get authenticated user's wallet balance
+ *     description: |
+ *       Check MOVE token balance for the currently authenticated user's wallet.
+ *       Requires authentication.
+ *       
+ *       **New Endpoint - Wallet Balance API**
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User's wallet balance retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: string
+ *                       format: uuid
+ *                       example: "user-uuid-here"
+ *                     address:
+ *                       type: string
+ *                       example: "0x9161980be9b78e96ddae98ceb289f6f4cda5e4af70667667ff9af8438a94e565"
+ *                     balance:
+ *                       type: number
+ *                       example: 125.5432
+ *                       description: Balance in MOVE tokens
+ *                     unit:
+ *                       type: string
+ *                       example: "MOVE"
+ *       401:
+ *         description: User not authenticated or wallet address not found
+ *       503:
+ *         description: Movement RPC temporarily unavailable
+ *       500:
+ *         description: Failed to fetch wallet balance
+ */
+
+/**
+ * @swagger
  * /api/groups/my-groups:
  *   get:
  *     tags: [Groups]

@@ -8,6 +8,7 @@ import subscriptionsRouter from './subscriptions.routes.js';
 import contractRouter from './contract.routes.js';
 import marketsRouter from './markets.routes.js';
 import adminRouter from './admin.routes.js';
+import walletRouter from './wallet.routes.js';
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use('/subscriptions', subscriptionsRouter);
 router.use('/contract', contractRouter);
 router.use('/markets', marketsRouter);
 router.use('/admin', adminRouter);
+router.use('/wallet', walletRouter);
 
 export default router;

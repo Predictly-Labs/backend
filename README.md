@@ -110,6 +110,13 @@ Production: `https://backend-3ufs.onrender.com/api`
 |--------|----------|------|-------------|
 | POST | `/api/users/auth/privy` | No | Register/login with Privy ID (DEPRECATED) |
 
+### Wallet Balance
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/wallet/balance/:address` | No | Get MOVE balance by wallet address |
+| GET | `/api/wallet/balance/:address/detailed` | No | Get detailed balance (MOVE, octas, formatted) |
+| GET | `/api/wallet/balance/me` | Yes | Get authenticated user's wallet balance |
+
 ### Users
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|

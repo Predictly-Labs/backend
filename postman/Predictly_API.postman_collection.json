@@ -220,7 +220,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"groupId\": \"{{groupId}}\",\n  \"title\": \"Will Bitcoin reach $100k by end of 2024?\",\n  \"description\": \"Bitcoin price prediction market\",\n  \"marketType\": \"STANDARD\",\n  \"endDate\": \"2024-12-31T23:59:59Z\",\n  \"minStake\": 1.0,\n  \"maxStake\": 100.0\n}"
+              "raw": "{\n  \"groupId\": \"{{groupId}}\",\n  \"title\": \"Will Bitcoin reach $100k by end of 2024?\",\n  \"description\": \"Bitcoin price prediction market\",\n  \"imageUrl\": \"https://example.com/bitcoin.jpg\",\n  \"marketType\": \"STANDARD\",\n  \"endDate\": \"2024-12-31T23:59:59Z\",\n  \"minStake\": 1.0,\n  \"maxStake\": 100.0\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/markets",
@@ -1322,6 +1322,56 @@
           }
         }
       ]
+    },
+    {
+      "name": "Wallet Balance",
+      "item": [
+        {
+          "name": "Get Balance by Address",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/balance/{{walletAddress}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet", "balance", "{{walletAddress}}"]
+            },
+            "description": "Check MOVE token balance for any wallet address (no auth required)"
+          }
+        },
+        {
+          "name": "Get Detailed Balance by Address",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/balance/{{walletAddress}}/detailed",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet", "balance", "{{walletAddress}}", "detailed"]
+            },
+            "description": "Check balance with detailed format (MOVE, octas, formatted string)"
+          }
+        },
+        {
+          "name": "Get My Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/balance/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet", "balance", "me"]
+            },
+            "description": "Check balance for authenticated user's wallet"
+          }
+        }
+      ],
+      "description": "Wallet balance endpoints - Check MOVE token balance by address"
     },
     {
       "name": "Upload",
