@@ -65,9 +65,16 @@ export async function syncActiveMarkets(): Promise<void> {
       try {
         await marketService.syncMarketData(market.id);
         successCount++;
-      } catch (error) {
+      } catch (error: any) {
         failCount++;
-        console.error(`❌ Failed to sync market ${market.id}:`, error);
+        // Check if error is due to market not found on-chain (after contract redeploy)
+        if (error.message?.includes('Failed to execute function') || 
+            error.message?.includes('RESOURCE_NOT_FOUND') ||
+            error.message?.includes('E_MARKET_NOT_FOUND')) {
+          console.warn(`⚠️  Market ${market.id} (onChainId: ${market.onChainId}) not found on-chain - may need to be redeployed`);
+        } else {
+          console.error(`❌ Failed to sync market ${market.id}:`, error.message || error);
+        }
       }
     }
 

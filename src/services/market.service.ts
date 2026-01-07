@@ -156,8 +156,15 @@ export async function getMarket(marketId: string, fetchOnChainData: boolean = tr
     try {
       const onChainMarketId = parseInt(market.onChainId);
       onChainData = await contractService.getMarketData(onChainMarketId);
-    } catch (error) {
-      console.error('Failed to fetch on-chain data:', error);
+    } catch (error: any) {
+      // Check if market doesn't exist on-chain (after contract redeploy)
+      if (error.message?.includes('Failed to execute function') || 
+          error.message?.includes('RESOURCE_NOT_FOUND') ||
+          error.message?.includes('E_MARKET_NOT_FOUND')) {
+        console.warn(`⚠️  Market ${market.id} (onChainId: ${market.onChainId}) not found on-chain`);
+      } else {
+        console.error('Failed to fetch on-chain data:', error.message || error);
+      }
       // Continue with cached data
     }
   }
@@ -210,8 +217,15 @@ export async function getGroupMarkets(
           const onChainMarketId = parseInt(market.onChainId);
           const onChainData = await contractService.getMarketData(onChainMarketId);
           return { ...market, onChainData };
-        } catch (error) {
-          console.error(`Failed to fetch on-chain data for market ${market.id}:`, error);
+        } catch (error: any) {
+          // Check if market doesn't exist on-chain (after contract redeploy)
+          if (error.message?.includes('Failed to execute function') || 
+              error.message?.includes('RESOURCE_NOT_FOUND') ||
+              error.message?.includes('E_MARKET_NOT_FOUND')) {
+            console.warn(`⚠️  Market ${market.id} (onChainId: ${market.onChainId}) not found on-chain`);
+          } else {
+            console.error(`Failed to fetch on-chain data for market ${market.id}:`, error.message || error);
+          }
           return market;
         }
       }
