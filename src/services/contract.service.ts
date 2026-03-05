@@ -352,6 +352,40 @@ export async function createMarketOnChain(params: {
 }
 
 /**
+ * Place vote on-chain (relay wallet)
+ */
+export async function placeVoteOnChain(params: {
+  marketId: number;
+  prediction: number;
+  amount: number;
+}): Promise<{ txHash: string }> {
+  const admin = getAdminAccount();
+  if (!admin) {
+    throw new Error('Admin account not configured');
+  }
+
+  const payload = buildPlaceVotePayload(params);
+
+  const transaction = await aptos.transaction.build.simple({
+    sender: admin.accountAddress,
+    data: payload,
+  });
+
+  const pendingTx = await aptos.signAndSubmitTransaction({
+    signer: admin,
+    transaction,
+  });
+
+  await aptos.waitForTransaction({
+    transactionHash: pendingTx.hash,
+  });
+
+  return {
+    txHash: pendingTx.hash,
+  };
+}
+
+/**
  * Resolve market on-chain (resolver only)
  */
 export async function resolveMarketOnChain(params: {

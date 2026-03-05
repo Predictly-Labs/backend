@@ -7,6 +7,12 @@ import {
   errorResponse,
   forbiddenResponse,
 } from '../utils/response.js';
+import {
+  placeVoteOnChain,
+  PREDICTION_YES,
+  PREDICTION_NO,
+  moveToOctas,
+} from '../services/contract.service.js';
 import type {
   CreatePredictionInput,
   PlaceVoteInput,
@@ -209,11 +215,32 @@ export async function placeVote(req: Request, res: Response) {
     return errorResponse(res, `Maximum stake is ${market.maxStake}`, 400);
   }
 
+  // Check if market has an on-chain ID
+  if (!market.onChainId) {
+    return errorResponse(res, 'Market is not yet deployed on-chain', 400);
+  }
+
   // Create vote and update market pools
   const isYes = prediction === 'YES';
   const newYesPool = market.yesPool + (isYes ? amount : 0);
   const newNoPool = market.noPool + (isYes ? 0 : amount);
   const totalPool = newYesPool + newNoPool;
+
+  const numericPrediction = isYes ? PREDICTION_YES : PREDICTION_NO;
+
+  // Submit on-chain transaction first — DB write is gated on success
+  let txHash: string;
+  try {
+    const result = await placeVoteOnChain({
+      marketId: parseInt(market.onChainId),
+      prediction: numericPrediction,
+      amount: moveToOctas(amount),
+    });
+    txHash = result.txHash;
+  } catch (err) {
+    console.error('On-chain vote submission failed:', err);
+    return errorResponse(res, 'Failed to submit on-chain transaction', 500);
+  }
 
   const [vote] = await prisma.$transaction([
     prisma.vote.create({
@@ -222,6 +249,7 @@ export async function placeVote(req: Request, res: Response) {
         userId,
         prediction,
         amount,
+        onChainTxHash: txHash,
       },
     }),
     prisma.predictionMarket.update({
