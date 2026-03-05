@@ -40,6 +40,36 @@
       "key": "marketId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "voteId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "txHash",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "balanceBefore",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "signature",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "publicKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "signInMessage",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -116,8 +146,39 @@
               "listen": "prerequest",
               "script": {
                 "exec": [
-                  "// This script runs before the request",
-                  "// It ensures the message is properly formatted in the request body"
+                  "// ============================================================",
+                  "// ⚠️  PENTING: Postman tidak bisa sign Ed25519 secara native.",
+                  "// ============================================================",
+                  "//",
+                  "// Gunakan salah satu cara berikut untuk mendapatkan signature:",
+                  "//",
+                  "// CARA 1 (Recommended) - Script otomatis:",
+                  "//   cd backend",
+                  "//   node scripts/generate-postman-token.js",
+                  "//   → Copy token langsung ke collection variable 'token'",
+                  "//   → Tidak perlu jalankan request ini sama sekali!",
+                  "//",
+                  "// CARA 2 - Manual via script test:",
+                  "//   cd backend",
+                  "//   node scripts/test-wallet-auth.js",
+                  "//   → Copy nilai signature, publicKey dari output",
+                  "//   → Paste ke body request ini",
+                  "//   → Pastikan message di body = nilai dari step 1 (bukan {{signInMessage}})",
+                  "//",
+                  "// CARA 3 - Browser wallet (Petra/Martian):",
+                  "//   Buka backend/scripts/test-wallet-auth-browser.html di browser",
+                  "//   → Connect wallet → Get Message → Sign & Verify",
+                  "//   → Copy token dari hasil",
+                  "//",
+                  "// FORMAT YANG BENAR:",
+                  "//   signature : hex string 128 chars (64 bytes Ed25519), tanpa 0x prefix",
+                  "//   publicKey : hex string 64 chars (32 bytes), tanpa 0x prefix",
+                  "//   message   : string PERSIS sama dengan yang diterima dari step 1",
+                  "//",
+                  "// JANGAN kirim signature sebagai plain text atau base64!",
+                  "console.log('⚠️  Pastikan signature & publicKey sudah di-set dari script helper.');",
+                  "console.log('   Jalankan: node scripts/generate-postman-token.js');",
+                  "console.log('   Atau: node scripts/test-wallet-auth.js');"
                 ],
                 "type": "text/javascript"
               }
@@ -127,11 +188,20 @@
               "script": {
                 "exec": [
                   "var jsonData = pm.response.json();",
-                  "if (jsonData.success && jsonData.data.token) {",
+                  "if (jsonData.success && jsonData.data && jsonData.data.token) {",
                   "    pm.collectionVariables.set('token', jsonData.data.token);",
                   "    pm.collectionVariables.set('userId', jsonData.data.user.id);",
-                  "    console.log('Token saved!');",
-                  "    console.log('User ID:', jsonData.data.user.id);",
+                  "    console.log('✅ Token saved!');",
+                  "    console.log('   User ID:', jsonData.data.user.id);",
+                  "    console.log('   Token  :', jsonData.data.token.substring(0, 50) + '...');",
+                  "} else {",
+                  "    console.log('❌ Login failed:', jsonData.message);",
+                  "    if (jsonData.message && jsonData.message.includes('64 bytes')) {",
+                  "        console.log('');",
+                  "        console.log('💡 FIX: Signature harus 64 bytes (128 hex chars).');",
+                  "        console.log('   Jalankan: node scripts/generate-postman-token.js');",
+                  "        console.log('   Atau gunakan test-wallet-auth-browser.html');",
+                  "    }",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -148,7 +218,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"walletAddress\": \"{{walletAddress}}\",\n  \"signature\": \"YOUR_WALLET_SIGNATURE_HERE\",\n  \"publicKey\": \"YOUR_PUBLIC_KEY_HERE\",\n  \"message\": {{signInMessage}}\n}",
+              "raw": "{\n  \"walletAddress\": \"{{walletAddress}}\",\n  \"signature\": \"{{signature}}\",\n  \"publicKey\": \"{{publicKey}}\",\n  \"message\": {{signInMessage}}\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -160,7 +230,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "wallet", "verify"]
             },
-            "description": "Verify the signed message and authenticate the user. Sign the message from step 1 with your wallet."
+            "description": "Verify the signed message and authenticate the user.\n\n⚠️  PENTING: Postman tidak bisa sign Ed25519 secara native.\n\n✅ CARA TERMUDAH:\n  1. Jalankan di terminal:\n     cd backend\n     node scripts/generate-postman-token.js\n  2. Copy token dari output langsung ke collection variable 'token'\n  3. Tidak perlu jalankan request ini!\n\n📋 CARA MANUAL (jika ingin test flow lengkap):\n  1. Jalankan step 1 (Get Sign-In Message) → message tersimpan di {{signInMessage}}\n  2. Jalankan: node scripts/test-wallet-auth.js\n  3. Copy nilai 'Signature' dan 'Public Key' dari output\n  4. Set ke collection variables:\n     - signature = nilai hex signature (128 chars, tanpa 0x)\n     - publicKey = nilai hex public key (64 chars, tanpa 0x)\n  5. Jalankan request ini\n\n❌ ERROR 'Invalid signature format. Expected 64 bytes':\n   Artinya signature yang dikirim bukan format hex Ed25519 yang benar.\n   Gunakan script helper di atas untuk generate signature yang valid."
           }
         },
         {
@@ -448,6 +518,319 @@
             },
             "description": "Get current user's vote history"
           }
+        },
+        {
+          "name": "🧪 Deposit Vote - Bug Fix Testing",
+          "item": [
+            {
+              "name": "1. Check Balance Before Vote",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "if (jsonData.success && jsonData.data) {",
+                      "    var balance = jsonData.data.balance || jsonData.data.move || jsonData.data;",
+                      "    pm.collectionVariables.set('balanceBefore', JSON.stringify(balance));",
+                      "    console.log('✅ Balance BEFORE vote saved:', JSON.stringify(balance));",
+                      "    console.log('👉 Now run: 2. Place Vote (Deposit MOVE Token)');",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wallet/balance/{{walletAddress}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "wallet", "balance", "{{walletAddress}}"]
+                },
+                "description": "Step 1: Check wallet balance BEFORE placing a vote. Save this value to compare after the vote.\n\n⚠️ Bug Fix Verification: After the fix, balance should DECREASE after a successful vote."
+              }
+            },
+            {
+              "name": "2. Place Vote (Deposit MOVE Token)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "console.log('Response status:', pm.response.code);",
+                      "console.log('Response body:', JSON.stringify(jsonData, null, 2));",
+                      "",
+                      "if (pm.response.code === 201 && jsonData.success) {",
+                      "    var vote = jsonData.data;",
+                      "    pm.collectionVariables.set('voteId', vote.id || '');",
+                      "    console.log('');",
+                      "    console.log('✅ Vote placed successfully!');",
+                      "    console.log('Vote ID:', vote.id);",
+                      "    console.log('Prediction:', vote.prediction);",
+                      "    console.log('Amount:', vote.amount);",
+                      "    console.log('');",
+                      "    if (vote.onChainTxHash) {",
+                      "        pm.collectionVariables.set('txHash', vote.onChainTxHash);",
+                      "        console.log('✅ BUG FIXED: onChainTxHash is SET =>', vote.onChainTxHash);",
+                      "        console.log('👉 Now run: 3. Check Balance After Vote to verify deduction');",
+                      "    } else {",
+                      "        console.log('❌ BUG STILL PRESENT: onChainTxHash is NULL/EMPTY');",
+                      "        console.log('   Token was NOT transferred on-chain!');",
+                      "    }",
+                      "    pm.test('onChainTxHash should be set (bug fix verification)', function() {",
+                      "        pm.expect(vote.onChainTxHash).to.not.be.null;",
+                      "        pm.expect(vote.onChainTxHash).to.not.be.undefined;",
+                      "        pm.expect(vote.onChainTxHash).to.not.equal('');",
+                      "    });",
+                      "} else if (pm.response.code === 400 && jsonData.message && jsonData.message.includes('not yet deployed on-chain')) {",
+                      "    console.log('⚠️  Market not initialized on-chain yet.');",
+                      "    console.log('   Run: Markets > 2. Initialize Market (On-Chain) first.');",
+                      "} else if (pm.response.code === 400 && jsonData.message && jsonData.message.includes('already voted')) {",
+                      "    console.log('⚠️  Already voted on this market. Use a different marketId.');",
+                      "} else {",
+                      "    console.log('❌ Vote failed:', jsonData.message || 'Unknown error');",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"prediction\": \"YES\",\n  \"amount\": 1.0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/{{marketId}}/vote",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "{{marketId}}", "vote"]
+                },
+                "description": "Step 2: Place a vote (deposit MOVE tokens) on a prediction market.\n\n🐛 BUG FIX VERIFICATION:\n- BEFORE fix: Returns 201 success but onChainTxHash is NULL — tokens NOT deducted\n- AFTER fix: Returns 201 success with onChainTxHash SET — tokens ARE deducted on-chain\n\nPrerequisites:\n- {{token}} must be set (run Wallet Authentication first)\n- {{marketId}} must be set to an ACTIVE market with onChainId\n- Market must be initialized on-chain (run Markets > Initialize Market first)\n- User must be a group member\n- User must not have voted on this market yet"
+              }
+            },
+            {
+              "name": "3. Check Balance After Vote",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "if (jsonData.success && jsonData.data) {",
+                      "    var balanceAfter = jsonData.data.balance || jsonData.data.move || jsonData.data;",
+                      "    var balanceBefore = pm.collectionVariables.get('balanceBefore');",
+                      "    console.log('');",
+                      "    console.log('=== BALANCE COMPARISON ===');",
+                      "    console.log('Balance BEFORE vote:', balanceBefore);",
+                      "    console.log('Balance AFTER  vote:', JSON.stringify(balanceAfter));",
+                      "    console.log('');",
+                      "    if (balanceBefore) {",
+                      "        try {",
+                      "            var before = JSON.parse(balanceBefore);",
+                      "            var beforeVal = typeof before === 'object' ? (before.move || before.balance || before) : before;",
+                      "            var afterVal = typeof balanceAfter === 'object' ? (balanceAfter.move || balanceAfter.balance || balanceAfter) : balanceAfter;",
+                      "            if (parseFloat(afterVal) < parseFloat(beforeVal)) {",
+                      "                console.log('✅ BUG FIXED: Balance DECREASED from', beforeVal, 'to', afterVal);",
+                      "                console.log('   Tokens were successfully deducted on-chain!');",
+                      "            } else {",
+                      "                console.log('❌ BUG STILL PRESENT: Balance did NOT decrease');",
+                      "                console.log('   Before:', beforeVal, '| After:', afterVal);",
+                      "            }",
+                      "        } catch(e) {",
+                      "            console.log('Could not parse balance for comparison:', e.message);",
+                      "        }",
+                      "    } else {",
+                      "        console.log('⚠️  No balanceBefore saved. Run step 1 first.');",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wallet/balance/{{walletAddress}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "wallet", "balance", "{{walletAddress}}"]
+                },
+                "description": "Step 3: Check wallet balance AFTER placing a vote.\n\n✅ Expected (after fix): Balance should be LOWER than before the vote by the voted amount.\n❌ Bug behavior: Balance stays the same as before."
+              }
+            },
+            {
+              "name": "4. Verify Vote Has onChainTxHash",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "if (jsonData.success && jsonData.data) {",
+                      "    var votes = Array.isArray(jsonData.data) ? jsonData.data : [jsonData.data];",
+                      "    console.log('');",
+                      "    console.log('=== VOTE onChainTxHash VERIFICATION ===');",
+                      "    var hasIssue = false;",
+                      "    votes.forEach(function(vote) {",
+                      "        if (vote.onChainTxHash) {",
+                      "            console.log('✅ Vote', vote.id, '| onChainTxHash:', vote.onChainTxHash);",
+                      "        } else {",
+                      "            console.log('❌ Vote', vote.id, '| onChainTxHash: NULL (bug present)');",
+                      "            hasIssue = true;",
+                      "        }",
+                      "    });",
+                      "    pm.test('All votes should have onChainTxHash set', function() {",
+                      "        pm.expect(hasIssue).to.be.false;",
+                      "    });",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/my-votes?limit=5",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "my-votes"],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "5"
+                    }
+                  ]
+                },
+                "description": "Step 4: Verify that recent votes have onChainTxHash populated in the database.\n\n✅ After fix: All votes should have a non-null onChainTxHash\n❌ Bug behavior: onChainTxHash is NULL for all votes"
+              }
+            },
+            {
+              "name": "5. Test Error - Market Not On-Chain",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "console.log('Status:', pm.response.code);",
+                      "console.log('Response:', JSON.stringify(jsonData));",
+                      "pm.test('Should return 400 for market not on-chain', function() {",
+                      "    pm.expect(pm.response.code).to.equal(400);",
+                      "});",
+                      "pm.test('Error message should mention on-chain', function() {",
+                      "    pm.expect(jsonData.message || jsonData.error || '').to.include('on-chain');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"prediction\": \"YES\",\n  \"amount\": 1.0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/REPLACE_WITH_MARKET_WITHOUT_ONCHAIN_ID/vote",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "REPLACE_WITH_MARKET_WITHOUT_ONCHAIN_ID", "vote"]
+                },
+                "description": "Step 5: Test that voting on a market without onChainId returns 400.\n\nReplace the market ID in the URL with a market that has NOT been initialized on-chain (onChainId is null).\n\n✅ Expected: 400 'Market is not yet deployed on-chain'"
+              }
+            },
+            {
+              "name": "6. Test Error - On-Chain Failure Returns 500 (No DB Write)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "console.log('Status:', pm.response.code);",
+                      "console.log('Response:', JSON.stringify(jsonData));",
+                      "console.log('');",
+                      "console.log('ℹ️  This test simulates on-chain failure.');",
+                      "console.log('   In production, if the contract call fails,');",
+                      "console.log('   the vote should NOT be saved to the database.');",
+                      "console.log('   Check DB to confirm no vote row was created.');"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"prediction\": \"YES\",\n  \"amount\": 999999999.0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/{{marketId}}/vote",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "{{marketId}}", "vote"]
+                },
+                "description": "Step 6: Test on-chain failure scenario by using an absurdly large amount that will be rejected by the contract.\n\n✅ Expected after fix: Returns 500 'Failed to submit on-chain transaction' AND no vote row is created in DB\n❌ Bug behavior: Would have returned 201 and created a DB row even without on-chain tx"
+              }
+            }
+          ],
+          "description": "🐛 Bug Fix Testing: User deposit MOVE token untuk memulai prediction\n\nBug: Balance tidak berkurang setelah vote berhasil (onChainTxHash = null)\nFix: placeVoteOnChain() dipanggil sebelum DB write, DB write di-gate pada konfirmasi on-chain\n\nTest Flow:\n1. Check balance before vote\n2. Place vote → verify onChainTxHash is SET\n3. Check balance after vote → verify balance DECREASED\n4. Verify all votes have onChainTxHash in DB\n5. Test error: market not on-chain → 400\n6. Test error: on-chain failure → 500, no DB write"
         }
       ],
       "description": "Legacy prediction endpoints (use Markets endpoints for new features)"

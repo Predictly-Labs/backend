@@ -73,7 +73,12 @@ export async function initializeMarket(marketId: string): Promise<Initialization
     }
 
     // Check if market is in valid state for initialization
-    if (market.status !== MarketStatus.PENDING) {
+    // Allow ACTIVE markets that haven't been initialized on-chain yet (onChainId is null)
+    const canInitialize =
+      market.status === MarketStatus.PENDING ||
+      (market.status === MarketStatus.ACTIVE && !market.onChainId);
+
+    if (!canInitialize) {
       throw new Error(`Market cannot be initialized in ${market.status} status`);
     }
 
