@@ -15,7 +15,7 @@ import fetch from 'node-fetch';
 
 // Configuration
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
-const WALLET_PRIVATE_KEY = process.env.MOVEMENT_PRIVATE_KEY || '';
+const WALLET_PRIVATE_KEY = process.env.MOVEMENT_PRIVATE_KEY || '907b44ed98f06b192588c450910f597bfe9c15a04d68811ea660575161885113';
 
 // Validate private key is set
 if (WALLET_PRIVATE_KEY === 'YOUR_PRIVATE_KEY_HERE') {

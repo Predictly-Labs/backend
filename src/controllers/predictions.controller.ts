@@ -231,15 +231,32 @@ export async function placeVote(req: Request, res: Response) {
   // Submit on-chain transaction first — DB write is gated on success
   let txHash: string;
   try {
+    console.log('🔄 Submitting vote on-chain:', {
+      marketId: market.onChainId,
+      prediction: numericPrediction,
+      amount: moveToOctas(amount),
+      userId,
+    });
+    
     const result = await placeVoteOnChain({
       marketId: parseInt(market.onChainId),
       prediction: numericPrediction,
       amount: moveToOctas(amount),
     });
     txHash = result.txHash;
-  } catch (err) {
-    console.error('On-chain vote submission failed:', err);
-    return errorResponse(res, 'Failed to submit on-chain transaction', 500);
+    
+    console.log('✅ On-chain vote submitted:', {
+      txHash,
+      marketId: market.onChainId,
+    });
+  } catch (err: any) {
+    console.error('❌ On-chain vote submission failed:', {
+      error: err.message,
+      stack: err.stack,
+      marketId: market.onChainId,
+      userId,
+    });
+    return errorResponse(res, `Failed to submit on-chain transaction: ${err.message}`, 500);
   }
 
   const [vote] = await prisma.$transaction([
