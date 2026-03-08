@@ -732,3 +732,103 @@ export async function bulkAssignJudges(req: Request, res: Response) {
     'Bulk judge assignment completed'
   );
 }
+
+/**
+ * Get group leaderboard by volume
+ * GET /api/groups/leaderboard
+ */
+export async function getGroupLeaderboard(req: Request, res: Response) {
+  const { limit = 10, timeframe = 'all' } = req.query as { limit?: number; timeframe?: string };
+  
+  // Parse limit
+  const limitNum = typeof limit === 'string' ? parseInt(limit) : limit;
+  const validLimit = Math.min(Math.max(limitNum, 1), 100); // Between 1-100
+
+  // Build date filter based on timeframe
+  let dateFilter: any = {};
+  const now = new Date();
+  
+  if (timeframe === 'day') {
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    dateFilter = { createdAt: { gte: oneDayAgo } };
+  } else if (timeframe === 'week') {
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    dateFilter = { createdAt: { gte: oneWeekAgo } };
+  } else if (timeframe === 'month') {
+    const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    dateFilter = { createdAt: { gte: oneMonthAgo } };
+  }
+  // 'all' = no date filter
+
+  // Fetch all groups with their markets
+  const groups = await prisma.group.findMany({
+    where: {
+      isPublic: true, // Only public groups in leaderboard
+    },
+    include: {
+      _count: {
+        select: {
+          members: true,
+          markets: true,
+        },
+      },
+      markets: {
+        where: dateFilter,
+        select: {
+          totalVolume: true,
+          status: true,
+          participantCount: true,
+        },
+      },
+      createdBy: {
+        select: {
+          id: true,
+          displayName: true,
+          avatarUrl: true,
+        },
+      },
+    },
+  });
+
+  // Calculate stats and sort by total volume
+  const leaderboard = groups
+    .map((group) => {
+      const totalVolume = group.markets.reduce((sum, m) => sum + m.totalVolume, 0);
+      const activeMarkets = group.markets.filter(m => m.status === 'ACTIVE').length;
+      const resolvedMarkets = group.markets.filter(m => m.status === 'RESOLVED').length;
+      const totalParticipants = group.markets.reduce((sum, m) => sum + m.participantCount, 0);
+
+      return {
+        id: group.id,
+        name: group.name,
+        description: group.description,
+        iconUrl: group.iconUrl,
+        inviteCode: group.inviteCode,
+        createdBy: group.createdBy,
+        createdAt: group.createdAt,
+        stats: {
+          totalVolume,
+          memberCount: group._count.members,
+          totalMarkets: group._count.markets,
+          activeMarkets,
+          resolvedMarkets,
+          totalParticipants,
+        },
+      };
+    })
+    .filter(group => group.stats.totalVolume > 0) // Only groups with volume
+    .sort((a, b) => b.stats.totalVolume - a.stats.totalVolume) // Sort by volume descending
+    .slice(0, validLimit); // Limit results
+
+  // Add rank
+  const rankedLeaderboard = leaderboard.map((group, index) => ({
+    rank: index + 1,
+    ...group,
+  }));
+
+  return successResponse(res, rankedLeaderboard, 'Leaderboard retrieved successfully', 200, {
+    timeframe,
+    limit: validLimit,
+    total: rankedLeaderboard.length,
+  });
+}

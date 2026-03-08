@@ -13,6 +13,7 @@ import {
   getGroupSettings,
   updateGroupSettings,
   bulkAssignJudges,
+  getGroupLeaderboard,
 } from '../controllers/groups.controller.js';
 import { getGroupMarkets } from '../controllers/markets.controller.js';
 import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.middleware.js';
@@ -33,6 +34,7 @@ const router = Router();
 
 // Public routes (with optional auth for better UX)
 router.get('/', validateQuery(listGroupsQuerySchema), getGroups);
+router.get('/leaderboard', getGroupLeaderboard); // Leaderboard endpoint
 
 // Protected routes (require auth) - MUST be before /:id to avoid conflicts
 router.get('/my-groups', authMiddleware, validateQuery(myGroupsQuerySchema), getMyGroups);

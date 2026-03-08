@@ -10,6 +10,7 @@ export interface ApiResponse<T = any> {
     limit?: number;
     total?: number;
     totalPages?: number;
+    [key: string]: any; // Allow additional meta fields
   };
 }
 

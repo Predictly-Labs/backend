@@ -454,6 +454,117 @@
 
 /**
  * @swagger
+ * /api/groups/leaderboard:
+ *   get:
+ *     tags: [Groups]
+ *     summary: Get group leaderboard by volume
+ *     description: Get a ranked list of groups sorted by total trading volume. Only public groups with volume > 0 are included.
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Number of groups to return (1-100)
+ *       - in: query
+ *         name: timeframe
+ *         schema:
+ *           type: string
+ *           enum: [all, day, week, month]
+ *           default: all
+ *         description: Time period for volume calculation (all=all time, day=24h, week=7d, month=30d)
+ *     responses:
+ *       200:
+ *         description: Leaderboard retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       rank:
+ *                         type: integer
+ *                         example: 1
+ *                         description: Position in leaderboard (1 = highest)
+ *                       id:
+ *                         type: string
+ *                         example: "uuid"
+ *                       name:
+ *                         type: string
+ *                         example: "Crypto Traders"
+ *                       description:
+ *                         type: string
+ *                         example: "Professional crypto trading group"
+ *                       iconUrl:
+ *                         type: string
+ *                         example: "https://example.com/icon.png"
+ *                       inviteCode:
+ *                         type: string
+ *                         example: "ABC123"
+ *                       createdBy:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           displayName:
+ *                             type: string
+ *                           avatarUrl:
+ *                             type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       stats:
+ *                         type: object
+ *                         properties:
+ *                           totalVolume:
+ *                             type: number
+ *                             example: 15000.50
+ *                             description: Total trading volume in MOVE
+ *                           memberCount:
+ *                             type: integer
+ *                             example: 150
+ *                           totalMarkets:
+ *                             type: integer
+ *                             example: 45
+ *                           activeMarkets:
+ *                             type: integer
+ *                             example: 12
+ *                           resolvedMarkets:
+ *                             type: integer
+ *                             example: 33
+ *                           totalParticipants:
+ *                             type: integer
+ *                             example: 450
+ *                 message:
+ *                   type: string
+ *                   example: "Leaderboard retrieved successfully"
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     timeframe:
+ *                       type: string
+ *                       example: "all"
+ *                     limit:
+ *                       type: integer
+ *                       example: 10
+ *                     total:
+ *                       type: integer
+ *                       example: 10
+ *       400:
+ *         description: Invalid parameters
+ */
+
+/**
+ * @swagger
  * /api/groups/{id}:
  *   get:
  *     tags: [Groups]

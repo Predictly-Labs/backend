@@ -1518,6 +1518,78 @@
           }
         },
         {
+          "name": "Get Group Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/leaderboard?limit=10&timeframe=all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "leaderboard"],
+              "query": [
+                { 
+                  "key": "limit", 
+                  "value": "10",
+                  "description": "Number of groups to return (1-100)"
+                },
+                { 
+                  "key": "timeframe", 
+                  "value": "all",
+                  "description": "Time period: all, day, week, month"
+                }
+              ]
+            },
+            "description": "Get ranked list of groups by total trading volume. Only public groups with volume > 0 are included."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has success field', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('success');",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Response has data array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Groups are ranked correctly', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data.length > 0) {",
+                  "        pm.expect(jsonData.data[0]).to.have.property('rank');",
+                  "        pm.expect(jsonData.data[0].rank).to.equal(1);",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Groups have required stats', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data.length > 0) {",
+                  "        var group = jsonData.data[0];",
+                  "        pm.expect(group).to.have.property('stats');",
+                  "        pm.expect(group.stats).to.have.property('totalVolume');",
+                  "        pm.expect(group.stats).to.have.property('memberCount');",
+                  "        pm.expect(group.stats).to.have.property('totalMarkets');",
+                  "    }",
+                  "});",
+                  "",
+                  "console.log('✅ Leaderboard:', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
           "name": "Create Group",
           "event": [
             {
