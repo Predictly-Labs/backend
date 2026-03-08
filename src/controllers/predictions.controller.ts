@@ -12,6 +12,7 @@ import {
   PREDICTION_YES,
   PREDICTION_NO,
   moveToOctas,
+  getUserVote,
 } from '../services/contract.service.js';
 import type {
   CreatePredictionInput,
@@ -218,6 +219,25 @@ export async function placeVote(req: Request, res: Response) {
   // Check if market has an on-chain ID
   if (!market.onChainId) {
     return errorResponse(res, 'Market is not yet deployed on-chain', 400);
+  }
+
+  // Check if user has already voted on-chain (in addition to DB check)
+  // This prevents E_ALREADY_VOTED error from the contract
+  try {
+    const onChainVote = await getUserVote(parseInt(market.onChainId), req.user!.walletAddress);
+    
+    if (onChainVote && onChainVote.amount > 0) {
+      console.log('⚠️  User already voted on-chain:', {
+        marketId: market.onChainId,
+        userId,
+        walletAddress: req.user!.walletAddress,
+        onChainVote,
+      });
+      return errorResponse(res, 'You have already voted on this market (on-chain)', 400);
+    }
+  } catch (err: any) {
+    console.error('Failed to check on-chain vote status:', err.message);
+    // Continue anyway — if on-chain check fails, let the contract handle it
   }
 
   // Create vote and update market pools
