@@ -7,13 +7,6 @@ import {
   errorResponse,
   forbiddenResponse,
 } from '../utils/response.js';
-import {
-  placeVoteOnChain,
-  PREDICTION_YES,
-  PREDICTION_NO,
-  moveToOctas,
-  getUserVote,
-} from '../services/contract.service.js';
 import type {
   CreatePredictionInput,
   PlaceVoteInput,
@@ -166,11 +159,20 @@ export async function getMarketById(req: Request, res: Response) {
 /**
  * Place a vote on a market
  * POST /api/predictions/:id/vote
+ * 
+ * NOTE: This endpoint only records the vote in the database.
+ * The actual on-chain transaction must be submitted by the client (frontend)
+ * using the payload from POST /api/contract/build/place-vote
+ * 
+ * Flow:
+ * 1. Frontend calls POST /api/contract/build/place-vote to get transaction payload
+ * 2. Frontend signs and submits transaction with user's wallet
+ * 3. Frontend calls this endpoint with the transaction hash to record in DB
  */
 export async function placeVote(req: Request, res: Response) {
   const { id } = req.params;
   const userId = req.user!.id;
-  const { prediction, amount } = req.body as PlaceVoteInput;
+  const { prediction, amount, txHash } = req.body as PlaceVoteInput & { txHash?: string };
 
   // Get market
   const market = await prisma.predictionMarket.findUnique({
@@ -221,63 +223,15 @@ export async function placeVote(req: Request, res: Response) {
     return errorResponse(res, 'Market is not yet deployed on-chain', 400);
   }
 
-  // Check if user has already voted on-chain (in addition to DB check)
-  // This prevents E_ALREADY_VOTED error from the contract
-  try {
-    const onChainVote = await getUserVote(parseInt(market.onChainId), req.user!.walletAddress);
-    
-    if (onChainVote && onChainVote.amount > 0) {
-      console.log('⚠️  User already voted on-chain:', {
-        marketId: market.onChainId,
-        userId,
-        walletAddress: req.user!.walletAddress,
-        onChainVote,
-      });
-      return errorResponse(res, 'You have already voted on this market (on-chain)', 400);
-    }
-  } catch (err: any) {
-    console.error('Failed to check on-chain vote status:', err.message);
-    // Continue anyway — if on-chain check fails, let the contract handle it
-  }
-
+  // txHash is optional for backward compatibility
+  // If provided, it means the transaction was already submitted on-chain
+  // If not provided, client should submit the transaction after this call
+  
   // Create vote and update market pools
   const isYes = prediction === 'YES';
   const newYesPool = market.yesPool + (isYes ? amount : 0);
   const newNoPool = market.noPool + (isYes ? 0 : amount);
   const totalPool = newYesPool + newNoPool;
-
-  const numericPrediction = isYes ? PREDICTION_YES : PREDICTION_NO;
-
-  // Submit on-chain transaction first — DB write is gated on success
-  let txHash: string;
-  try {
-    console.log('🔄 Submitting vote on-chain:', {
-      marketId: market.onChainId,
-      prediction: numericPrediction,
-      amount: moveToOctas(amount),
-      userId,
-    });
-    
-    const result = await placeVoteOnChain({
-      marketId: parseInt(market.onChainId),
-      prediction: numericPrediction,
-      amount: moveToOctas(amount),
-    });
-    txHash = result.txHash;
-    
-    console.log('✅ On-chain vote submitted:', {
-      txHash,
-      marketId: market.onChainId,
-    });
-  } catch (err: any) {
-    console.error('❌ On-chain vote submission failed:', {
-      error: err.message,
-      stack: err.stack,
-      marketId: market.onChainId,
-      userId,
-    });
-    return errorResponse(res, `Failed to submit on-chain transaction: ${err.message}`, 500);
-  }
 
   const [vote] = await prisma.$transaction([
     prisma.vote.create({
@@ -286,7 +240,7 @@ export async function placeVote(req: Request, res: Response) {
         userId,
         prediction,
         amount,
-        onChainTxHash: txHash,
+        onChainTxHash: txHash || null,
       },
     }),
     prisma.predictionMarket.update({

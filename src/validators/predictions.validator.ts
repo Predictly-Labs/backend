@@ -48,6 +48,10 @@ export const placeVoteSchema = z.object({
   amount: z
     .number()
     .positive('Stake amount must be positive'),
+  txHash: z
+    .string()
+    .regex(/^0x[a-fA-F0-9]{64}$/, 'Invalid transaction hash format')
+    .optional(),
 });
 
 export type PlaceVoteInput = z.infer<typeof placeVoteSchema>;
