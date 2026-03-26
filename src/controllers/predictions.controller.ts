@@ -1,0 +1,701 @@
+import { Request, Response } from 'express';
+import { prisma } from '../config/database.js';
+import {
+  successResponse,
+  createdResponse,
+  notFoundResponse,
+  errorResponse,
+  forbiddenResponse,
+} from '../utils/response.js';
+import type {
+  CreatePredictionInput,
+  PlaceVoteInput,
+  ResolveMarketInput,
+  ListPredictionsQuery,
+} from '../validators/predictions.validator.js';
+
+/**
+ * Create a new prediction market
+ * POST /api/predictions
+ */
+export async function createMarket(req: Request, res: Response) {
+  const userId = req.user!.id;
+  const input = req.body as CreatePredictionInput;
+
+  // Check if user is a member of the group
+  const membership = await prisma.groupMember.findFirst({
+    where: { groupId: input.groupId, userId },
+  });
+
+  if (!membership) {
+    return forbiddenResponse(res, 'You must be a group member to create markets');
+  }
+
+  const market = await prisma.predictionMarket.create({
+    data: {
+      groupId: input.groupId,
+      title: input.title,
+      description: input.description,
+      imageUrl: input.imageUrl,
+      marketType: input.marketType,
+      endDate: new Date(input.endDate),
+      minStake: input.minStake,
+      maxStake: input.maxStake,
+      createdById: userId,
+      status: 'ACTIVE',
+      yesPercentage: 50,
+      noPercentage: 50,
+    },
+    include: {
+      creator: {
+        select: { id: true, displayName: true, avatarUrl: true },
+      },
+      group: {
+        select: { id: true, name: true },
+      },
+    },
+  });
+
+  return createdResponse(res, market, 'Market created successfully');
+}
+
+/**
+ * List prediction markets
+ * GET /api/predictions
+ */
+export async function getMarkets(req: Request, res: Response) {
+  const { page, limit, groupId, status, marketType } = req.query as unknown as ListPredictionsQuery;
+  const skip = (page - 1) * limit;
+
+  const where = {
+    ...(groupId && { groupId }),
+    ...(status && { status }),
+    ...(marketType && { marketType }),
+  };
+
+  const [markets, total] = await Promise.all([
+    prisma.predictionMarket.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        creator: {
+          select: { id: true, displayName: true, avatarUrl: true },
+        },
+        group: {
+          select: { id: true, name: true },
+        },
+        _count: { select: { votes: true } },
+      },
+    }),
+    prisma.predictionMarket.count({ where }),
+  ]);
+
+  const result = markets.map((m) => ({
+    ...m,
+    participantCount: m._count.votes,
+  }));
+
+  return successResponse(res, result, undefined, 200, {
+    page,
+    limit,
+    total,
+    totalPages: Math.ceil(total / limit),
+  });
+}
+
+/**
+ * Get market by ID
+ * GET /api/predictions/:id
+ */
+export async function getMarketById(req: Request, res: Response) {
+  const { id } = req.params;
+  const userId = req.user?.id;
+
+  const market = await prisma.predictionMarket.findUnique({
+    where: { id },
+    include: {
+      creator: {
+        select: { id: true, displayName: true, avatarUrl: true },
+      },
+      group: {
+        select: { id: true, name: true },
+      },
+      votes: {
+        include: {
+          user: {
+            select: { id: true, displayName: true, avatarUrl: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!market) {
+    return notFoundResponse(res, 'Market not found');
+  }
+
+  // Get user's vote if authenticated
+  const userVote = userId
+    ? market.votes.find((v) => v.userId === userId)
+    : null;
+
+  return successResponse(res, {
+    ...market,
+    participantCount: market.votes.length,
+    userVote: userVote
+      ? {
+          prediction: userVote.prediction,
+          amount: userVote.amount,
+          hasClaimedReward: userVote.hasClaimedReward,
+          rewardAmount: userVote.rewardAmount,
+        }
+      : null,
+  });
+}
+
+
+/**
+ * Place a vote on a market
+ * POST /api/predictions/:id/vote
+ * 
+ * NOTE: This endpoint only records the vote in the database.
+ * The actual on-chain transaction must be submitted by the client (frontend)
+ * using the payload from POST /api/contract/build/place-vote
+ * 
+ * Flow:
+ * 1. Frontend calls POST /api/contract/build/place-vote to get transaction payload
+ * 2. Frontend signs and submits transaction with user's wallet
+ * 3. Frontend calls this endpoint with the transaction hash to record in DB
+ */
+export async function placeVote(req: Request, res: Response) {
+  const { id } = req.params;
+  const userId = req.user!.id;
+  const { prediction, amount, txHash } = req.body as PlaceVoteInput & { txHash?: string };
+
+  // Get market
+  const market = await prisma.predictionMarket.findUnique({
+    where: { id },
+    include: {
+      group: {
+        include: {
+          members: { where: { userId }, select: { id: true } },
+        },
+      },
+    },
+  });
+
+  if (!market) {
+    return notFoundResponse(res, 'Market not found');
+  }
+
+  // Check if user is group member
+  if (market.group.members.length === 0) {
+    return forbiddenResponse(res, 'You must be a group member to vote');
+  }
+
+  // Check market status
+  if (market.status !== 'ACTIVE') {
+    return errorResponse(res, 'Market is not active', 400);
+  }
+
+  // Check if already voted
+  const existingVote = await prisma.vote.findUnique({
+    where: { marketId_userId: { marketId: id, userId } },
+  });
+
+  if (existingVote) {
+    return errorResponse(res, 'You have already voted on this market', 400);
+  }
+
+  // Validate stake amount
+  if (amount < market.minStake) {
+    return errorResponse(res, `Minimum stake is ${market.minStake}`, 400);
+  }
+
+  if (market.maxStake && amount > market.maxStake) {
+    return errorResponse(res, `Maximum stake is ${market.maxStake}`, 400);
+  }
+
+  // Check if market has an on-chain ID
+  if (!market.onChainId) {
+    return errorResponse(res, 'Market is not yet deployed on-chain', 400);
+  }
+
+  // txHash is optional for backward compatibility
+  // If provided, it means the transaction was already submitted on-chain
+  // If not provided, client should submit the transaction after this call
+  
+  // Create vote and update market pools
+  const isYes = prediction === 'YES';
+  const newYesPool = market.yesPool + (isYes ? amount : 0);
+  const newNoPool = market.noPool + (isYes ? 0 : amount);
+  const totalPool = newYesPool + newNoPool;
+
+  const [vote] = await prisma.$transaction([
+    prisma.vote.create({
+      data: {
+        marketId: id,
+        userId,
+        prediction,
+        amount,
+        onChainTxHash: txHash || null,
+      },
+    }),
+    prisma.predictionMarket.update({
+      where: { id },
+      data: {
+        yesPool: newYesPool,
+        noPool: newNoPool,
+        totalVolume: totalPool,
+        yesPercentage: (newYesPool / totalPool) * 100,
+        noPercentage: (newNoPool / totalPool) * 100,
+        participantCount: { increment: 1 },
+      },
+    }),
+  ]);
+
+  return createdResponse(res, vote, 'Vote placed successfully');
+}
+
+/**
+ * Resolve a market (Judge/Admin only)
+ * POST /api/predictions/:id/resolve
+ */
+export async function resolveMarket(req: Request, res: Response) {
+  const { id } = req.params;
+  const userId = req.user!.id;
+  const { outcome, resolutionNote } = req.body as ResolveMarketInput;
+
+  // Get market with group membership
+  const market = await prisma.predictionMarket.findUnique({
+    where: { id },
+    include: {
+      group: {
+        include: {
+          members: {
+            where: { userId, role: { in: ['ADMIN', 'JUDGE'] } },
+          },
+        },
+      },
+      votes: true,
+    },
+  });
+
+  if (!market) {
+    return notFoundResponse(res, 'Market not found');
+  }
+
+  // Check if user is judge or admin
+  if (market.group.members.length === 0) {
+    return forbiddenResponse(res, 'Only judges or admins can resolve markets');
+  }
+
+  // Check if market has ended
+  if (new Date() < market.endDate) {
+    return errorResponse(res, 'Market has not ended yet', 400);
+  }
+
+  // Check if already resolved
+  if (market.status === 'RESOLVED') {
+    return errorResponse(res, 'Market is already resolved', 400);
+  }
+
+  // Calculate rewards
+  const totalPool = market.yesPool + market.noPool;
+  const winningPool = outcome === 'YES' ? market.yesPool : market.noPool;
+  const winningVotes = market.votes.filter((v) => v.prediction === outcome);
+
+  // Update votes with rewards
+  const rewardUpdates = market.votes.map((vote) => {
+    let rewardAmount = 0;
+
+    if (outcome === 'INVALID') {
+      // Refund original amount
+      rewardAmount = vote.amount;
+    } else if (vote.prediction === outcome) {
+      // Winner gets proportional share of total pool
+      rewardAmount = (vote.amount / winningPool) * totalPool;
+    }
+
+    return prisma.vote.update({
+      where: { id: vote.id },
+      data: { rewardAmount },
+    });
+  });
+
+  // Update user stats
+  const statsUpdates = market.votes.map((vote) => {
+    const isWinner = outcome !== 'INVALID' && vote.prediction === outcome;
+    return prisma.user.update({
+      where: { id: vote.userId },
+      data: {
+        totalPredictions: { increment: 1 },
+        ...(isWinner && { correctPredictions: { increment: 1 } }),
+      },
+    });
+  });
+
+  // Execute all updates
+  await prisma.$transaction([
+    prisma.predictionMarket.update({
+      where: { id },
+      data: {
+        status: 'RESOLVED',
+        outcome,
+        resolvedById: userId,
+        resolvedAt: new Date(),
+        resolutionNote,
+      },
+    }),
+    ...rewardUpdates,
+    ...statsUpdates,
+  ]);
+
+  return successResponse(res, { outcome, resolvedAt: new Date() }, 'Market resolved successfully');
+}
+
+/**
+ * Claim reward for a resolved market
+ * POST /api/predictions/:id/claim
+ */
+export async function claimReward(req: Request, res: Response) {
+  const { id } = req.params;
+  const userId = req.user!.id;
+
+  // Get user's vote
+  const vote = await prisma.vote.findUnique({
+    where: { marketId_userId: { marketId: id, userId } },
+    include: { market: true },
+  });
+
+  if (!vote) {
+    return notFoundResponse(res, 'You have not voted on this market');
+  }
+
+  if (vote.market.status !== 'RESOLVED') {
+    return errorResponse(res, 'Market is not resolved yet', 400);
+  }
+
+  if (vote.hasClaimedReward) {
+    return errorResponse(res, 'Reward already claimed', 400);
+  }
+
+  if (!vote.rewardAmount || vote.rewardAmount <= 0) {
+    return errorResponse(res, 'You are not eligible for a reward', 400);
+  }
+
+  // Mark as claimed and update user earnings
+  await prisma.$transaction([
+    prisma.vote.update({
+      where: { id: vote.id },
+      data: { hasClaimedReward: true },
+    }),
+    prisma.user.update({
+      where: { id: userId },
+      data: { totalEarnings: { increment: vote.rewardAmount } },
+    }),
+  ]);
+
+  return successResponse(res, { rewardAmount: vote.rewardAmount }, 'Reward claimed successfully');
+}
+
+/**
+ * Get user's vote statistics
+ * GET /api/predictions/my-votes/stats
+ */
+export async function getMyVotesStats(req: Request, res: Response) {
+  const userId = req.user!.id;
+
+  // Fetch all user votes with market and group details
+  const votes = await prisma.vote.findMany({
+    where: { userId },
+    include: {
+      market: {
+        include: {
+          group: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // Calculate aggregates
+  const totalVotes = votes.length;
+  const totalInvested = votes.reduce((sum, v) => sum + v.amount, 0);
+  const totalEarnings = votes.reduce((sum, v) => sum + (v.rewardAmount || 0), 0);
+  
+  const resolvedVotes = votes.filter(v => v.market.status === 'RESOLVED');
+  const activeVotes = votes.filter(v => v.market.status === 'ACTIVE');
+  
+  const wonVotes = resolvedVotes.filter(v => 
+    (v.prediction === 'YES' && v.market.outcome === 'YES') ||
+    (v.prediction === 'NO' && v.market.outcome === 'NO')
+  );
+  
+  const lostVotes = resolvedVotes.filter(v => 
+    (v.prediction === 'YES' && v.market.outcome === 'NO') ||
+    (v.prediction === 'NO' && v.market.outcome === 'YES')
+  );
+
+  // Calculate ROI and win rate
+  const roi = totalInvested > 0 ? (totalEarnings - totalInvested) / totalInvested : 0;
+  const winRate = resolvedVotes.length > 0 ? wonVotes.length / resolvedVotes.length : 0;
+  const averageStake = totalVotes > 0 ? totalInvested / totalVotes : 0;
+
+  // Group statistics by group
+  const groupMap = new Map<string, { groupId: string; groupName: string; votes: number; earnings: number }>();
+  
+  votes.forEach(vote => {
+    const groupId = vote.market.groupId;
+    const groupName = vote.market.group.name;
+    const earnings = vote.rewardAmount || 0;
+    
+    if (groupMap.has(groupId)) {
+      const existing = groupMap.get(groupId)!;
+      existing.votes += 1;
+      existing.earnings += earnings;
+    } else {
+      groupMap.set(groupId, {
+        groupId,
+        groupName,
+        votes: 1,
+        earnings,
+      });
+    }
+  });
+
+  const byGroup = Array.from(groupMap.values());
+
+  const stats = {
+    totalVotes,
+    totalInvested,
+    totalEarnings,
+    roi,
+    winRate,
+    activeVotes: activeVotes.length,
+    resolvedVotes: resolvedVotes.length,
+    wonVotes: wonVotes.length,
+    lostVotes: lostVotes.length,
+    averageStake,
+    byGroup,
+  };
+
+  return successResponse(res, stats, 'Statistics retrieved successfully');
+}
+
+/**
+ * Check user's vote on a specific market
+ * GET /api/predictions/:marketId/my-vote
+ */
+export async function getMyVoteOnMarket(req: Request, res: Response) {
+  const { marketId } = req.params;
+  const userId = req.user!.id;
+
+  // Check if market exists
+  const market = await prisma.predictionMarket.findUnique({
+    where: { id: marketId },
+    select: { id: true, title: true, status: true, outcome: true },
+  });
+
+  if (!market) {
+    return notFoundResponse(res, 'Market not found');
+  }
+
+  // Get user's vote on this market
+  const vote = await prisma.vote.findUnique({
+    where: {
+      marketId_userId: {
+        marketId,
+        userId,
+      },
+    },
+    include: {
+      market: {
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          outcome: true,
+        },
+      },
+    },
+  });
+
+  // Return null if user hasn't voted
+  if (!vote) {
+    return successResponse(res, null, 'No vote found for this market');
+  }
+
+  return successResponse(res, vote, 'Vote retrieved successfully');
+}
+
+/**
+ * Get user's votes
+ * GET /api/predictions/my-votes
+ */
+export async function getUserVotes(req: Request, res: Response) {
+  const userId = req.user!.id;
+  const { page, limit, status, groupId, outcome } = req.query as any;
+  
+  // Parse query parameters with defaults
+  const pageNum = page ? parseInt(page) : 1;
+  const limitNum = limit ? parseInt(limit) : 20;
+  const skip = (pageNum - 1) * limitNum;
+
+  // Build where clause
+  const where: any = {
+    userId,
+    ...(groupId && {
+      market: {
+        groupId,
+        ...(status && { status }),
+      },
+    }),
+    ...(!groupId && status && {
+      market: { status },
+    }),
+  };
+
+  // Handle outcome filter
+  if (outcome === 'won' || outcome === 'lost') {
+    where.market = {
+      ...where.market,
+      status: 'RESOLVED',
+      outcome: { not: null },
+    };
+  } else if (outcome === 'pending') {
+    where.market = {
+      ...where.market,
+      status: { in: ['ACTIVE', 'PENDING'] },
+    };
+  }
+
+  // Fetch votes with pagination
+  const [votes, total] = await Promise.all([
+    prisma.vote.findMany({
+      where,
+      skip,
+      take: limitNum,
+      include: {
+        market: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            outcome: true,
+            endDate: true,
+            groupId: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.vote.count({ where }),
+  ]);
+
+  // Calculate mock yield for each vote
+  const DAILY_YIELD_RATE = 0.05 / 365;
+  let votesWithYield = votes.map((vote) => {
+    const daysSinceVote = Math.floor(
+      (Date.now() - vote.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const mockYield = vote.amount * DAILY_YIELD_RATE * daysSinceVote;
+
+    return {
+      ...vote,
+      mockYield: Math.round(mockYield * 10000) / 10000,
+      daysSinceVote,
+    };
+  });
+
+  // Filter by outcome if specified
+  if (outcome === 'won') {
+    votesWithYield = votesWithYield.filter(
+      (vote) =>
+        (vote.prediction === 'YES' && vote.market.outcome === 'YES') ||
+        (vote.prediction === 'NO' && vote.market.outcome === 'NO')
+    );
+  } else if (outcome === 'lost') {
+    votesWithYield = votesWithYield.filter(
+      (vote) =>
+        (vote.prediction === 'YES' && vote.market.outcome === 'NO') ||
+        (vote.prediction === 'NO' && vote.market.outcome === 'YES')
+    );
+  }
+
+  return successResponse(res, votesWithYield, undefined, 200, {
+    page: pageNum,
+    limit: limitNum,
+    total,
+    totalPages: Math.ceil(total / limitNum),
+  });
+}
+
+
+/**
+ * Get markets resolved by a specific user (judge history)
+ * GET /api/predictions/resolved-by/:userId
+ */
+export async function getResolvedMarkets(req: Request, res: Response) {
+  const { userId } = req.params;
+  const { page = '1', limit = '20' } = req.query;
+  
+  const pageNum = parseInt(page as string);
+  const limitNum = parseInt(limit as string);
+  const skip = (pageNum - 1) * limitNum;
+
+  // Fetch markets resolved by this user
+  const [markets, total] = await Promise.all([
+    prisma.predictionMarket.findMany({
+      where: {
+        resolvedById: userId,
+        status: 'RESOLVED',
+      },
+      skip,
+      take: limitNum,
+      orderBy: { resolvedAt: 'desc' },
+      include: {
+        group: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+        _count: {
+          select: { votes: true },
+        },
+      },
+    }),
+    prisma.predictionMarket.count({
+      where: {
+        resolvedById: userId,
+        status: 'RESOLVED',
+      },
+    }),
+  ]);
+
+  const result = markets.map((m) => ({
+    ...m,
+    participantCount: m._count.votes,
+  }));
+
+  return successResponse(res, result, undefined, 200, {
+    page: pageNum,
+    limit: limitNum,
+    total,
+    totalPages: Math.ceil(total / limitNum),
+  });
+}

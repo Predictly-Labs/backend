@@ -1,0 +1,1935 @@
+{
+  "info": {
+    "name": "Predictly API - Hybrid Market System",
+    "description": "Prediction Market with Wallet Authentication & Hybrid On-Chain/Off-Chain System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "8b279a9b-17b1-4684-9650-f671bfc640df",
+      "type": "string"
+    },
+    {
+      "key": "walletAddress",
+      "value": "0x9161980be9b78e96ddae98ceb289f6f4cda5e4af70667667ff9af8438a94e565",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "groupId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "marketId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "voteId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "txHash",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "balanceBefore",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "signature",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "publicKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "signInMessage",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            },
+            "description": "Check if the API server is running"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wallet Authentication",
+      "item": [
+        {
+          "name": "1. Get Sign-In Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data.message) {",
+                  "    // Save the message as a JSON-escaped string",
+                  "    pm.collectionVariables.set('signInMessage', JSON.stringify(jsonData.data.message));",
+                  "    pm.collectionVariables.set('nonce', jsonData.data.nonce);",
+                  "    console.log('Sign-in message saved!');",
+                  "    console.log('Message:', jsonData.data.message);",
+                  "    console.log('Nonce:', jsonData.data.nonce);",
+                  "    console.log('Expires at:', jsonData.data.expiresAt);",
+                  "    console.log('');",
+                  "    console.log('⚠️  IMPORTANT: Copy the message above and sign it with your wallet.');",
+                  "    console.log('Then paste the signature in the next request.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"walletAddress\": \"{{walletAddress}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/wallet/message",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "wallet", "message"]
+            },
+            "description": "Generate a message to be signed by the user's wallet. The nonce expires after 5 minutes."
+          }
+        },
+        {
+          "name": "2. Verify Signature & Login",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// ============================================================",
+                  "// ⚠️  PENTING: Postman tidak bisa sign Ed25519 secara native.",
+                  "// ============================================================",
+                  "//",
+                  "// Gunakan salah satu cara berikut untuk mendapatkan signature:",
+                  "//",
+                  "// CARA 1 (Recommended) - Script otomatis:",
+                  "//   cd backend",
+                  "//   node scripts/generate-postman-token.js",
+                  "//   → Copy token langsung ke collection variable 'token'",
+                  "//   → Tidak perlu jalankan request ini sama sekali!",
+                  "//",
+                  "// CARA 2 - Manual via script test:",
+                  "//   cd backend",
+                  "//   node scripts/test-wallet-auth.js",
+                  "//   → Copy nilai signature, publicKey dari output",
+                  "//   → Paste ke body request ini",
+                  "//   → Pastikan message di body = nilai dari step 1 (bukan {{signInMessage}})",
+                  "//",
+                  "// CARA 3 - Browser wallet (Petra/Martian):",
+                  "//   Buka backend/scripts/test-wallet-auth-browser.html di browser",
+                  "//   → Connect wallet → Get Message → Sign & Verify",
+                  "//   → Copy token dari hasil",
+                  "//",
+                  "// FORMAT YANG BENAR:",
+                  "//   signature : hex string 128 chars (64 bytes Ed25519), tanpa 0x prefix",
+                  "//   publicKey : hex string 64 chars (32 bytes), tanpa 0x prefix",
+                  "//   message   : string PERSIS sama dengan yang diterima dari step 1",
+                  "//",
+                  "// JANGAN kirim signature sebagai plain text atau base64!",
+                  "console.log('⚠️  Pastikan signature & publicKey sudah di-set dari script helper.');",
+                  "console.log('   Jalankan: node scripts/generate-postman-token.js');",
+                  "console.log('   Atau: node scripts/test-wallet-auth.js');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.data.token);",
+                  "    pm.collectionVariables.set('userId', jsonData.data.user.id);",
+                  "    console.log('✅ Token saved!');",
+                  "    console.log('   User ID:', jsonData.data.user.id);",
+                  "    console.log('   Token  :', jsonData.data.token.substring(0, 50) + '...');",
+                  "} else {",
+                  "    console.log('❌ Login failed:', jsonData.message);",
+                  "    if (jsonData.message && jsonData.message.includes('64 bytes')) {",
+                  "        console.log('');",
+                  "        console.log('💡 FIX: Signature harus 64 bytes (128 hex chars).');",
+                  "        console.log('   Jalankan: node scripts/generate-postman-token.js');",
+                  "        console.log('   Atau gunakan test-wallet-auth-browser.html');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"walletAddress\": \"{{walletAddress}}\",\n  \"signature\": \"{{signature}}\",\n  \"publicKey\": \"{{publicKey}}\",\n  \"message\": {{signInMessage}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/wallet/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "wallet", "verify"]
+            },
+            "description": "Verify the signed message and authenticate the user.\n\n⚠️  PENTING: Postman tidak bisa sign Ed25519 secara native.\n\n✅ CARA TERMUDAH:\n  1. Jalankan di terminal:\n     cd backend\n     node scripts/generate-postman-token.js\n  2. Copy token dari output langsung ke collection variable 'token'\n  3. Tidak perlu jalankan request ini!\n\n📋 CARA MANUAL (jika ingin test flow lengkap):\n  1. Jalankan step 1 (Get Sign-In Message) → message tersimpan di {{signInMessage}}\n  2. Jalankan: node scripts/test-wallet-auth.js\n  3. Copy nilai 'Signature' dan 'Public Key' dari output\n  4. Set ke collection variables:\n     - signature = nilai hex signature (128 chars, tanpa 0x)\n     - publicKey = nilai hex public key (64 chars, tanpa 0x)\n  5. Jalankan request ini\n\n❌ ERROR 'Invalid signature format. Expected 64 bytes':\n   Artinya signature yang dikirim bukan format hex Ed25519 yang benar.\n   Gunakan script helper di atas untuk generate signature yang valid."
+          }
+        },
+        {
+          "name": "3. Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Get the authenticated user's profile"
+          }
+        }
+      ],
+      "description": "New wallet-based authentication endpoints"
+    },
+    {
+      "name": "Markets (Hybrid System)",
+      "item": [
+        {
+          "name": "1. Create Market (Off-Chain)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data.id) {",
+                  "    pm.collectionVariables.set('marketId', jsonData.data.id);",
+                  "    console.log('Market ID saved:', jsonData.data.id);",
+                  "    console.log('Status:', jsonData.data.status);",
+                  "    console.log('On-Chain ID:', jsonData.data.onChainId || 'Not initialized yet');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"groupId\": \"{{groupId}}\",\n  \"title\": \"Will Bitcoin reach $100k by end of 2024?\",\n  \"description\": \"Bitcoin price prediction market\",\n  \"imageUrl\": \"https://example.com/bitcoin.jpg\",\n  \"marketType\": \"STANDARD\",\n  \"endDate\": \"2024-12-31T23:59:59Z\",\n  \"minStake\": 1.0,\n  \"maxStake\": 100.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/markets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markets"]
+            },
+            "description": "Create a new market off-chain (FREE - no gas fees). Market status will be PENDING until initialized on-chain."
+          }
+        },
+        {
+          "name": "2. Initialize Market (On-Chain)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data.onChainId) {",
+                  "    console.log('Market initialized on-chain!');",
+                  "    console.log('On-Chain ID:', jsonData.data.onChainId);",
+                  "    console.log('Status:', jsonData.data.status);",
+                  "    console.log('Transaction Hash:', jsonData.data.transactionHash);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/markets/{{marketId}}/initialize",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markets", "{{marketId}}", "initialize"]
+            },
+            "description": "Initialize market on-chain. Backend relay wallet pays gas fees. This is typically called automatically before first vote."
+          }
+        },
+        {
+          "name": "3. Get Market Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/markets/{{marketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markets", "{{marketId}}"]
+            },
+            "description": "Get market details with on-chain data (if initialized)"
+          }
+        },
+        {
+          "name": "4. Get Group Markets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/{{groupId}}/markets?status=ACTIVE&limit=10&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "{{groupId}}", "markets"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "description": "Filter by status: PENDING, ACTIVE, RESOLVED, CANCELLED"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Get all markets for a specific group with optional filters"
+          }
+        },
+        {
+          "name": "5. Sync Market Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/markets/{{marketId}}/sync",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "markets", "{{marketId}}", "sync"]
+            },
+            "description": "Manually sync market data from blockchain (auto-syncs every 1 minute for active markets)"
+          }
+        }
+      ],
+      "description": "Hybrid market system - create off-chain (free), vote on-chain (user pays gas)"
+    },
+    {
+      "name": "Predictions (Legacy)",
+      "item": [
+        {
+          "name": "List Prediction Markets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions?page=1&limit=10&status=ACTIVE",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "ACTIVE" }
+              ]
+            },
+            "description": "List all prediction markets with pagination"
+          }
+        },
+        {
+          "name": "Get Market By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/{{marketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "{{marketId}}"]
+            },
+            "description": "Get detailed information about a specific market"
+          }
+        },
+        {
+          "name": "Place Vote",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prediction\": \"YES\",\n  \"amount\": 10.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/{{marketId}}/vote",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "{{marketId}}", "vote"]
+            },
+            "description": "Place a vote on a prediction market"
+          }
+        },
+        {
+          "name": "Resolve Market",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outcome\": \"YES\",\n  \"resolutionNote\": \"Bitcoin reached $100k on Dec 15, 2024\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/{{marketId}}/resolve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "{{marketId}}", "resolve"]
+            },
+            "description": "Resolve a market (Judge/Admin only)"
+          }
+        },
+        {
+          "name": "Claim Reward",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/{{marketId}}/claim",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "{{marketId}}", "claim"]
+            },
+            "description": "Claim reward from a resolved market"
+          }
+        },
+        {
+          "name": "Get My Votes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/predictions/my-votes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "predictions", "my-votes"]
+            },
+            "description": "Get current user's vote history"
+          }
+        },
+        {
+          "name": "🧪 Deposit Vote - Bug Fix Testing",
+          "item": [
+            {
+              "name": "1. Check Balance Before Vote",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "if (jsonData.success && jsonData.data) {",
+                      "    var balance = jsonData.data.balance || jsonData.data.move || jsonData.data;",
+                      "    pm.collectionVariables.set('balanceBefore', JSON.stringify(balance));",
+                      "    console.log('✅ Balance BEFORE vote saved:', JSON.stringify(balance));",
+                      "    console.log('👉 Now run: 2. Place Vote (Deposit MOVE Token)');",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wallet/balance/{{walletAddress}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "wallet", "balance", "{{walletAddress}}"]
+                },
+                "description": "Step 1: Check wallet balance BEFORE placing a vote. Save this value to compare after the vote.\n\n⚠️ Bug Fix Verification: After the fix, balance should DECREASE after a successful vote."
+              }
+            },
+            {
+              "name": "2. Place Vote (Deposit MOVE Token)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "console.log('Response status:', pm.response.code);",
+                      "console.log('Response body:', JSON.stringify(jsonData, null, 2));",
+                      "",
+                      "if (pm.response.code === 201 && jsonData.success) {",
+                      "    var vote = jsonData.data;",
+                      "    pm.collectionVariables.set('voteId', vote.id || '');",
+                      "    console.log('');",
+                      "    console.log('✅ Vote placed successfully!');",
+                      "    console.log('Vote ID:', vote.id);",
+                      "    console.log('Prediction:', vote.prediction);",
+                      "    console.log('Amount:', vote.amount);",
+                      "    console.log('');",
+                      "    if (vote.onChainTxHash) {",
+                      "        pm.collectionVariables.set('txHash', vote.onChainTxHash);",
+                      "        console.log('✅ BUG FIXED: onChainTxHash is SET =>', vote.onChainTxHash);",
+                      "        console.log('👉 Now run: 3. Check Balance After Vote to verify deduction');",
+                      "    } else {",
+                      "        console.log('❌ BUG STILL PRESENT: onChainTxHash is NULL/EMPTY');",
+                      "        console.log('   Token was NOT transferred on-chain!');",
+                      "    }",
+                      "    pm.test('onChainTxHash should be set (bug fix verification)', function() {",
+                      "        pm.expect(vote.onChainTxHash).to.not.be.null;",
+                      "        pm.expect(vote.onChainTxHash).to.not.be.undefined;",
+                      "        pm.expect(vote.onChainTxHash).to.not.equal('');",
+                      "    });",
+                      "} else if (pm.response.code === 400 && jsonData.message && jsonData.message.includes('not yet deployed on-chain')) {",
+                      "    console.log('⚠️  Market not initialized on-chain yet.');",
+                      "    console.log('   Run: Markets > 2. Initialize Market (On-Chain) first.');",
+                      "} else if (pm.response.code === 400 && jsonData.message && jsonData.message.includes('already voted')) {",
+                      "    console.log('⚠️  Already voted on this market. Use a different marketId.');",
+                      "} else {",
+                      "    console.log('❌ Vote failed:', jsonData.message || 'Unknown error');",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"prediction\": \"YES\",\n  \"amount\": 1.0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/{{marketId}}/vote",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "{{marketId}}", "vote"]
+                },
+                "description": "Step 2: Place a vote (deposit MOVE tokens) on a prediction market.\n\n🐛 BUG FIX VERIFICATION:\n- BEFORE fix: Returns 201 success but onChainTxHash is NULL — tokens NOT deducted\n- AFTER fix: Returns 201 success with onChainTxHash SET — tokens ARE deducted on-chain\n\nPrerequisites:\n- {{token}} must be set (run Wallet Authentication first)\n- {{marketId}} must be set to an ACTIVE market with onChainId\n- Market must be initialized on-chain (run Markets > Initialize Market first)\n- User must be a group member\n- User must not have voted on this market yet"
+              }
+            },
+            {
+              "name": "3. Check Balance After Vote",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "if (jsonData.success && jsonData.data) {",
+                      "    var balanceAfter = jsonData.data.balance || jsonData.data.move || jsonData.data;",
+                      "    var balanceBefore = pm.collectionVariables.get('balanceBefore');",
+                      "    console.log('');",
+                      "    console.log('=== BALANCE COMPARISON ===');",
+                      "    console.log('Balance BEFORE vote:', balanceBefore);",
+                      "    console.log('Balance AFTER  vote:', JSON.stringify(balanceAfter));",
+                      "    console.log('');",
+                      "    if (balanceBefore) {",
+                      "        try {",
+                      "            var before = JSON.parse(balanceBefore);",
+                      "            var beforeVal = typeof before === 'object' ? (before.move || before.balance || before) : before;",
+                      "            var afterVal = typeof balanceAfter === 'object' ? (balanceAfter.move || balanceAfter.balance || balanceAfter) : balanceAfter;",
+                      "            if (parseFloat(afterVal) < parseFloat(beforeVal)) {",
+                      "                console.log('✅ BUG FIXED: Balance DECREASED from', beforeVal, 'to', afterVal);",
+                      "                console.log('   Tokens were successfully deducted on-chain!');",
+                      "            } else {",
+                      "                console.log('❌ BUG STILL PRESENT: Balance did NOT decrease');",
+                      "                console.log('   Before:', beforeVal, '| After:', afterVal);",
+                      "            }",
+                      "        } catch(e) {",
+                      "            console.log('Could not parse balance for comparison:', e.message);",
+                      "        }",
+                      "    } else {",
+                      "        console.log('⚠️  No balanceBefore saved. Run step 1 first.');",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/wallet/balance/{{walletAddress}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "wallet", "balance", "{{walletAddress}}"]
+                },
+                "description": "Step 3: Check wallet balance AFTER placing a vote.\n\n✅ Expected (after fix): Balance should be LOWER than before the vote by the voted amount.\n❌ Bug behavior: Balance stays the same as before."
+              }
+            },
+            {
+              "name": "4. Verify Vote Has onChainTxHash",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "if (jsonData.success && jsonData.data) {",
+                      "    var votes = Array.isArray(jsonData.data) ? jsonData.data : [jsonData.data];",
+                      "    console.log('');",
+                      "    console.log('=== VOTE onChainTxHash VERIFICATION ===');",
+                      "    var hasIssue = false;",
+                      "    votes.forEach(function(vote) {",
+                      "        if (vote.onChainTxHash) {",
+                      "            console.log('✅ Vote', vote.id, '| onChainTxHash:', vote.onChainTxHash);",
+                      "        } else {",
+                      "            console.log('❌ Vote', vote.id, '| onChainTxHash: NULL (bug present)');",
+                      "            hasIssue = true;",
+                      "        }",
+                      "    });",
+                      "    pm.test('All votes should have onChainTxHash set', function() {",
+                      "        pm.expect(hasIssue).to.be.false;",
+                      "    });",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/my-votes?limit=5",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "my-votes"],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "5"
+                    }
+                  ]
+                },
+                "description": "Step 4: Verify that recent votes have onChainTxHash populated in the database.\n\n✅ After fix: All votes should have a non-null onChainTxHash\n❌ Bug behavior: onChainTxHash is NULL for all votes"
+              }
+            },
+            {
+              "name": "5. Test Error - Market Not On-Chain",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "console.log('Status:', pm.response.code);",
+                      "console.log('Response:', JSON.stringify(jsonData));",
+                      "pm.test('Should return 400 for market not on-chain', function() {",
+                      "    pm.expect(pm.response.code).to.equal(400);",
+                      "});",
+                      "pm.test('Error message should mention on-chain', function() {",
+                      "    pm.expect(jsonData.message || jsonData.error || '').to.include('on-chain');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"prediction\": \"YES\",\n  \"amount\": 1.0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/REPLACE_WITH_MARKET_WITHOUT_ONCHAIN_ID/vote",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "REPLACE_WITH_MARKET_WITHOUT_ONCHAIN_ID", "vote"]
+                },
+                "description": "Step 5: Test that voting on a market without onChainId returns 400.\n\nReplace the market ID in the URL with a market that has NOT been initialized on-chain (onChainId is null).\n\n✅ Expected: 400 'Market is not yet deployed on-chain'"
+              }
+            },
+            {
+              "name": "6. Test Error - On-Chain Failure Returns 500 (No DB Write)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "console.log('Status:', pm.response.code);",
+                      "console.log('Response:', JSON.stringify(jsonData));",
+                      "console.log('');",
+                      "console.log('ℹ️  This test simulates on-chain failure.');",
+                      "console.log('   In production, if the contract call fails,');",
+                      "console.log('   the vote should NOT be saved to the database.');",
+                      "console.log('   Check DB to confirm no vote row was created.');"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"prediction\": \"YES\",\n  \"amount\": 999999999.0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/{{marketId}}/vote",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "{{marketId}}", "vote"]
+                },
+                "description": "Step 6: Test on-chain failure scenario by using an absurdly large amount that will be rejected by the contract.\n\n✅ Expected after fix: Returns 500 'Failed to submit on-chain transaction' AND no vote row is created in DB\n❌ Bug behavior: Would have returned 201 and created a DB row even without on-chain tx"
+              }
+            }
+          ],
+          "description": "🐛 Bug Fix Testing: User deposit MOVE token untuk memulai prediction\n\nBug: Balance tidak berkurang setelah vote berhasil (onChainTxHash = null)\nFix: placeVoteOnChain() dipanggil sebelum DB write, DB write di-gate pada konfirmasi on-chain\n\nTest Flow:\n1. Check balance before vote\n2. Place vote → verify onChainTxHash is SET\n3. Check balance after vote → verify balance DECREASED\n4. Verify all votes have onChainTxHash in DB\n5. Test error: market not on-chain → 400\n6. Test error: on-chain failure → 500, no DB write"
+        }
+      ],
+      "description": "Legacy prediction endpoints (use Markets endpoints for new features)"
+    },
+    {
+      "name": "Contract (On-Chain)",
+      "item": [
+        {
+          "name": "Get Contract Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/contract/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contract", "info"]
+            },
+            "description": "Get smart contract information"
+          }
+        },
+        {
+          "name": "Get On-Chain Market",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/contract/markets/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contract", "markets", "1"]
+            },
+            "description": "Get market data directly from blockchain"
+          }
+        },
+        {
+          "name": "Get On-Chain Vote",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/contract/markets/1/votes/{{walletAddress}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contract", "markets", "1", "votes", "{{walletAddress}}"]
+            },
+            "description": "Get vote data directly from blockchain"
+          }
+        },
+        {
+          "name": "Build Create Market Payload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Will ETH reach $5k?\",\n  \"description\": \"Ethereum price prediction\",\n  \"endTime\": 1735689599,\n  \"minStake\": 100000000,\n  \"maxStake\": 10000000000,\n  \"resolver\": \"{{walletAddress}}\",\n  \"marketType\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contract/build/create-market",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contract", "build", "create-market"]
+            },
+            "description": "Build transaction payload for creating market on-chain"
+          }
+        },
+        {
+          "name": "Build Place Vote Payload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"marketId\": 1,\n  \"prediction\": 1,\n  \"amount\": 100000000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contract/build/place-vote",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contract", "build", "place-vote"]
+            },
+            "description": "Build transaction payload for placing vote on-chain"
+          }
+        },
+        {
+          "name": "Build Resolve Payload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"marketId\": 1,\n  \"outcome\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contract/build/resolve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contract", "build", "resolve"]
+            },
+            "description": "Build transaction payload for resolving market on-chain"
+          }
+        },
+        {
+          "name": "Build Claim Payload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"marketId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contract/build/claim",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contract", "build", "claim"]
+            },
+            "description": "Build transaction payload for claiming reward on-chain"
+          }
+        }
+      ],
+      "description": "Direct blockchain interaction endpoints"
+    },
+    {
+      "name": "Admin Endpoints",
+      "item": [
+        {
+          "name": "Get Relay Wallet Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/relay-wallet/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "relay-wallet", "balance"]
+            },
+            "description": "Check relay wallet balance (requires admin token)"
+          }
+        },
+        {
+          "name": "Get Relay Wallet Transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/relay-wallet/transactions?limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "relay-wallet", "transactions"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Get relay wallet transaction history (requires admin token)"
+          }
+        },
+        {
+          "name": "Monitor Relay Wallet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/relay-wallet/monitor",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "relay-wallet", "monitor"]
+            },
+            "description": "Manually trigger relay wallet monitoring (requires admin token)"
+          }
+        }
+      ],
+      "description": "Admin endpoints for monitoring relay wallet"
+    },
+    {
+      "name": "Legacy Auth (Deprecated)",
+      "item": [
+        {
+          "name": "Register/Login with Privy (DEPRECATED)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.data.token);",
+                  "    pm.collectionVariables.set('userId', jsonData.data.user.id);",
+                  "    console.log('Token saved!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"privyId\": \"test-user-{{$randomInt}}\",\n  \"walletAddress\": \"0x{{$randomHexadecimal}}{{$randomHexadecimal}}\",\n  \"displayName\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/auth/privy",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "auth", "privy"]
+            },
+            "description": "DEPRECATED: Use wallet-based authentication instead"
+          }
+        }
+      ],
+      "description": "Legacy Privy authentication (kept for backward compatibility)"
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Updated Name\",\n  \"avatarUrl\": \"https://example.com/avatar.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Get User By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get User Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userId}}/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userId}}", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Get Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/leaderboard?groupId={{groupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "leaderboard"],
+              "query": [
+                {
+                  "key": "groupId",
+                  "value": "{{groupId}}",
+                  "description": "Optional: Filter by group"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Missing API Features (v2.1)",
+      "item": [
+        {
+          "name": "Sprint 1 - Critical Features",
+          "item": [
+            {
+              "name": "Get My Groups",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/groups/my-groups?page=1&limit=20&role=MEMBER&search=crypto&sort=active",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "groups", "my-groups"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number (default: 1)"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Items per page (default: 20, max: 100)"
+                    },
+                    {
+                      "key": "role",
+                      "value": "MEMBER",
+                      "description": "Filter by role: ADMIN, JUDGE, MODERATOR, MEMBER",
+                      "disabled": true
+                    },
+                    {
+                      "key": "search",
+                      "value": "crypto",
+                      "description": "Search by group name",
+                      "disabled": true
+                    },
+                    {
+                      "key": "sort",
+                      "value": "active",
+                      "description": "Sort by: recent, active, members",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Get list of groups where the current user is a member with pagination, role filter, search, and sorting options."
+              }
+            },
+            {
+              "name": "Get My Votes (Enhanced)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/my-votes?page=1&limit=20&status=ACTIVE&groupId={{groupId}}&outcome=won",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "my-votes"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number (default: 1)"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Items per page (default: 20, max: 100)"
+                    },
+                    {
+                      "key": "status",
+                      "value": "ACTIVE",
+                      "description": "Filter by market status: ACTIVE, RESOLVED, PENDING",
+                      "disabled": true
+                    },
+                    {
+                      "key": "groupId",
+                      "value": "{{groupId}}",
+                      "description": "Filter by group ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "outcome",
+                      "value": "won",
+                      "description": "Filter by outcome: won, lost, pending",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Get current user's vote history with enhanced pagination and filters (status, groupId, outcome)."
+              }
+            },
+            {
+              "name": "Check My Vote on Market",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/{{marketId}}/my-vote",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "{{marketId}}", "my-vote"]
+                },
+                "description": "Check if current user has voted on a specific market. Returns vote details or null if no vote exists."
+              }
+            }
+          ],
+          "description": "Sprint 1: Critical features - My Groups, Enhanced My Votes, Check My Vote"
+        },
+        {
+          "name": "Sprint 2 - High Priority",
+          "item": [
+            {
+              "name": "Get Group Members (with Role Filter)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/groups/{{groupId}}/members?role=JUDGE",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "groups", "{{groupId}}", "members"],
+                  "query": [
+                    {
+                      "key": "role",
+                      "value": "JUDGE",
+                      "description": "Filter by role: ADMIN, JUDGE, MODERATOR, MEMBER",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Get group members with optional role filter. Enhanced version of existing endpoint."
+              }
+            },
+            {
+              "name": "Get My Votes Statistics",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/my-votes/stats",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "my-votes", "stats"]
+                },
+                "description": "Get aggregate statistics for current user's votes including total votes, invested, earnings, ROI, win rate, and stats grouped by group."
+              }
+            },
+            {
+              "name": "List Markets (with Type Filter)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions?page=1&limit=10&status=ACTIVE&marketType=NO_LOSS",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "status",
+                      "value": "ACTIVE"
+                    },
+                    {
+                      "key": "marketType",
+                      "value": "NO_LOSS",
+                      "description": "Filter by type: STANDARD, NO_LOSS (WITH_YIELD future feature)",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "List prediction markets with market type filter. Enhanced version of existing endpoint."
+              }
+            }
+          ],
+          "description": "Sprint 2: High priority features - Role filter, Vote statistics, Market type filter"
+        },
+        {
+          "name": "Sprint 3 - Polish Features",
+          "item": [
+            {
+              "name": "Get Group Settings",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/groups/{{groupId}}/settings",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "groups", "{{groupId}}", "settings"]
+                },
+                "description": "Get group settings including default market type and allowed market types."
+              }
+            },
+            {
+              "name": "Update Group Settings",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"defaultMarketType\": \"NO_LOSS\",\n  \"allowedMarketTypes\": [\"STANDARD\", \"NO_LOSS\"]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/groups/{{groupId}}/settings",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "groups", "{{groupId}}", "settings"]
+                },
+                "description": "Update group settings (Admin only). Configure default market type and allowed market types for the group."
+              }
+            },
+            {
+              "name": "Get Judge Resolution History",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/predictions/resolved-by/{{userId}}?page=1&limit=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "predictions", "resolved-by", "{{userId}}"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number (default: 1)"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Items per page (default: 20)"
+                    }
+                  ]
+                },
+                "description": "Get list of markets resolved by a specific judge with pagination."
+              }
+            },
+            {
+              "name": "Bulk Assign Judges",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userIds\": [\n    \"user-id-1\",\n    \"user-id-2\",\n    \"user-id-3\"\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/groups/{{groupId}}/judges/bulk",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "groups", "{{groupId}}", "judges", "bulk"]
+                },
+                "description": "Assign multiple users as judges in a group (Admin only). Returns success/failure for each user."
+              }
+            }
+          ],
+          "description": "Sprint 3: Polish features - Group settings, Judge history, Bulk judge assignment"
+        }
+      ],
+      "description": "New endpoints added in v2.1.0 - Missing API Features Implementation (10 new/enhanced endpoints)"
+    },
+    {
+      "name": "Groups",
+      "item": [
+        {
+          "name": "List Public Groups",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Group Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/leaderboard?limit=10&timeframe=all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "leaderboard"],
+              "query": [
+                { 
+                  "key": "limit", 
+                  "value": "10",
+                  "description": "Number of groups to return (1-100)"
+                },
+                { 
+                  "key": "timeframe", 
+                  "value": "all",
+                  "description": "Time period: all, day, week, month"
+                }
+              ]
+            },
+            "description": "Get ranked list of groups by total trading volume. Only public groups with volume > 0 are included."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has success field', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('success');",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Response has data array', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('data');",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Groups are ranked correctly', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data.length > 0) {",
+                  "        pm.expect(jsonData.data[0]).to.have.property('rank');",
+                  "        pm.expect(jsonData.data[0].rank).to.equal(1);",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Groups have required stats', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data.length > 0) {",
+                  "        var group = jsonData.data[0];",
+                  "        pm.expect(group).to.have.property('stats');",
+                  "        pm.expect(group.stats).to.have.property('totalVolume');",
+                  "        pm.expect(group.stats).to.have.property('memberCount');",
+                  "        pm.expect(group.stats).to.have.property('totalMarkets');",
+                  "    }",
+                  "});",
+                  "",
+                  "console.log('✅ Leaderboard:', JSON.stringify(pm.response.json(), null, 2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.success && jsonData.data.id) {",
+                  "    pm.collectionVariables.set('groupId', jsonData.data.id);",
+                  "    console.log('Group ID saved: ' + jsonData.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Crypto Enthusiasts\",\n  \"description\": \"A group for crypto price predictions\",\n  \"isPublic\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/groups",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups"]
+            }
+          }
+        },
+        {
+          "name": "Get Group Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/{{groupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "{{groupId}}"]
+            }
+          }
+        },
+        {
+          "name": "Join Group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inviteCode\": \"YOUR_INVITE_CODE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/join",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "join"]
+            }
+          }
+        },
+        {
+          "name": "Get Group Members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/{{groupId}}/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "{{groupId}}", "members"]
+            }
+          }
+        },
+        {
+          "name": "Update Group",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Group Name\",\n  \"description\": \"Updated description\",\n  \"isPublic\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/{{groupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "{{groupId}}"]
+            },
+            "description": "Update group details (Admin only)"
+          }
+        },
+        {
+          "name": "Delete Group",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/{{groupId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "{{groupId}}"]
+            },
+            "description": "Delete a group (Admin only)"
+          }
+        },
+        {
+          "name": "Update Member Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"JUDGE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/{{groupId}}/members/{{userId}}/role",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "{{groupId}}", "members", "{{userId}}", "role"]
+            },
+            "description": "Update member role (Admin only)"
+          }
+        },
+        {
+          "name": "Remove Member",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/groups/{{groupId}}/members/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "groups", "{{groupId}}", "members", "{{userId}}"]
+            },
+            "description": "Remove a member from group (Admin only)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wallet Balance",
+      "item": [
+        {
+          "name": "Get Balance by Address",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/balance/{{walletAddress}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet", "balance", "{{walletAddress}}"]
+            },
+            "description": "Check MOVE token balance for any wallet address (no auth required)"
+          }
+        },
+        {
+          "name": "Get Detailed Balance by Address",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/balance/{{walletAddress}}/detailed",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet", "balance", "{{walletAddress}}", "detailed"]
+            },
+            "description": "Check balance with detailed format (MOVE, octas, formatted string)"
+          }
+        },
+        {
+          "name": "Get My Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/balance/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet", "balance", "me"]
+            },
+            "description": "Check balance for authenticated user's wallet"
+          }
+        }
+      ],
+      "description": "Wallet balance endpoints - Check MOVE token balance by address"
+    },
+    {
+      "name": "Upload",
+      "item": [
+        {
+          "name": "Upload Image to IPFS",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/upload/image",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "upload", "image"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscriptions",
+      "item": [
+        {
+          "name": "Create Checkout Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"monthly\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/subscriptions/checkout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscriptions", "checkout"]
+            },
+            "description": "Create checkout session for Pro subscription"
+          }
+        },
+        {
+          "name": "Get Subscription Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/subscriptions/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscriptions", "status"]
+            },
+            "description": "Get current user's subscription status"
+          }
+        },
+        {
+          "name": "Webhook (Mock)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"plan\": \"monthly\",\n  \"transactionId\": \"tx_{{$randomUUID}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/subscriptions/webhook",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscriptions", "webhook"]
+            },
+            "description": "Simulate payment webhook to activate Pro status"
+          }
+        }
+      ]
+    }
+  ]
+}

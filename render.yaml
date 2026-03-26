@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: predictly-backend
+    runtime: node
+    region: singapore
+    plan: free
+    buildCommand: npm install && npm run db:generate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: DATABASE_URL
+        sync: false
+      - key: PINATA_API_KEY
+        sync: false
+      - key: PINATA_SECRET_KEY
+        sync: false
+      - key: PINATA_GATEWAY_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
