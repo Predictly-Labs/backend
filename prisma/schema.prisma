@@ -269,3 +269,24 @@ model RateLimit {
   @@index([identifier])
   @@index([expiresAt])
 }
+
+// ══════════════════════════════════════════════════════════════
+// WAITLIST & REFERRALS
+// ══════════════════════════════════════════════════════════════
+
+model Waitlist {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  walletAddress String   @unique
+  referralCode  String   @unique
+  referredBy    String?
+
+  createdAt DateTime @default(now())
+
+  // Self-referencing relation
+  referrer  Waitlist?  @relation("WaitlistReferrals", fields: [referredBy], references: [id])
+  referrals Waitlist[] @relation("WaitlistReferrals")
+
+  @@index([referralCode])
+  @@index([referredBy])
+}

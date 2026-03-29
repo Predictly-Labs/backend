@@ -70,6 +70,11 @@
       "key": "signInMessage",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "referralCode",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -775,7 +780,12 @@
                 "url": {
                   "raw": "{{baseUrl}}/api/predictions/REPLACE_WITH_MARKET_WITHOUT_ONCHAIN_ID/vote",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "predictions", "REPLACE_WITH_MARKET_WITHOUT_ONCHAIN_ID", "vote"]
+                  "path": [
+                    "api",
+                    "predictions",
+                    "REPLACE_WITH_MARKET_WITHOUT_ONCHAIN_ID",
+                    "vote"
+                  ]
                 },
                 "description": "Step 5: Test that voting on a market without onChainId returns 400.\n\nReplace the market ID in the URL with a market that has NOT been initialized on-chain (onChainId is null).\n\n✅ Expected: 400 'Market is not yet deployed on-chain'"
               }
@@ -872,7 +882,14 @@
             "url": {
               "raw": "{{baseUrl}}/api/contract/markets/1/votes/{{walletAddress}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "contract", "markets", "1", "votes", "{{walletAddress}}"]
+              "path": [
+                "api",
+                "contract",
+                "markets",
+                "1",
+                "votes",
+                "{{walletAddress}}"
+              ]
             },
             "description": "Get vote data directly from blockchain"
           }
@@ -1527,13 +1544,13 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "groups", "leaderboard"],
               "query": [
-                { 
-                  "key": "limit", 
+                {
+                  "key": "limit",
                   "value": "10",
                   "description": "Number of groups to return (1-100)"
                 },
-                { 
-                  "key": "timeframe", 
+                {
+                  "key": "timeframe",
                   "value": "all",
                   "description": "Time period: all, day, week, month"
                 }
@@ -1753,7 +1770,14 @@
             "url": {
               "raw": "{{baseUrl}}/api/groups/{{groupId}}/members/{{userId}}/role",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "groups", "{{groupId}}", "members", "{{userId}}", "role"]
+              "path": [
+                "api",
+                "groups",
+                "{{groupId}}",
+                "members",
+                "{{userId}}",
+                "role"
+              ]
             },
             "description": "Update member role (Admin only)"
           }
@@ -1802,7 +1826,13 @@
             "url": {
               "raw": "{{baseUrl}}/api/wallet/balance/{{walletAddress}}/detailed",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "wallet", "balance", "{{walletAddress}}", "detailed"]
+              "path": [
+                "api",
+                "wallet",
+                "balance",
+                "{{walletAddress}}",
+                "detailed"
+              ]
             },
             "description": "Check balance with detailed format (MOVE, octas, formatted string)"
           }
@@ -1927,6 +1957,115 @@
               "path": ["api", "subscriptions", "webhook"]
             },
             "description": "Simulate payment webhook to activate Pro status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Waitlist",
+      "description": "Waitlist registration with referral tracking",
+      "item": [
+        {
+          "name": "Register to Waitlist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data && json.data.referralCode) {",
+                  "        pm.collectionVariables.set('referralCode', json.data.referralCode);",
+                  "        console.log('Referral code saved:', json.data.referralCode);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"walletAddress\": \"0xAbCdEf1234567890AbCdEf1234567890AbCdEf12\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/waitlist",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "waitlist"]
+            },
+            "description": "Register a new user to the waitlist. Returns a unique referral code. Optionally pass `referralCode` to attribute the registration to an existing user.\n\n**Request Body:**\n- `email` (required): Valid email address\n- `walletAddress` (required): Ethereum wallet address (`0x` + 40 hex chars)\n- `referralCode` (optional): Referral code from an existing waitlist member\n\n**Responses:**\n- `201`: Registered successfully\n- `409`: Email or wallet address already registered\n- `404`: Referral code not found\n- `422`: Validation error"
+          }
+        },
+        {
+          "name": "Register to Waitlist (with referral)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"referred@example.com\",\n  \"walletAddress\": \"0x1234567890AbCdEf1234567890AbCdEf12345678\",\n  \"referralCode\": \"{{referralCode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/waitlist",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "waitlist"]
+            },
+            "description": "Register a new user to the waitlist using an existing referral code. Uses the `referralCode` collection variable saved from a previous registration.\n\n**Request Body:**\n- `email` (required): Valid email address\n- `walletAddress` (required): Ethereum wallet address (`0x` + 40 hex chars)\n- `referralCode` (optional): Referral code from an existing waitlist member"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Referral",
+      "description": "Referral statistics for waitlist members",
+      "item": [
+        {
+          "name": "Get Referral Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/referral/{{referralCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "referral", "{{referralCode}}"]
+            },
+            "description": "Get referral statistics for a given referral code. Returns the total number of users who registered using this code.\n\n**Path Parameter:**\n- `code`: The referral code to look up (e.g. `AB12CD`)\n\n**Responses:**\n- `200`: Returns `referralCode` and `totalReferrals` count\n- `404`: Referral code not found"
+          }
+        },
+        {
+          "name": "Get Referral Stats (custom code)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/referral/AB12CD",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "referral", "AB12CD"]
+            },
+            "description": "Get referral statistics using a hardcoded referral code. Replace `AB12CD` with the actual referral code.\n\n**Responses:**\n- `200`: Returns `referralCode` and `totalReferrals` count\n- `404`: Referral code not found"
           }
         }
       ]
