@@ -2429,7 +2429,7 @@
  *               walletAddress:
  *                 type: string
  *                 example: "0xAbCdEf1234567890AbCdEf1234567890AbCdEf12"
- *                 description: Ethereum wallet address — must match `^0x[0-9a-fA-F]{40}$` (42 chars total)
+ *                 description: Ethereum wallet address (must start with 0x followed by exactly 40 hexadecimal characters, 42 chars total)
  *               referralCode:
  *                 type: string
  *                 example: "AB12CD"
