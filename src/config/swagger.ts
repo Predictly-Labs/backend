@@ -1,11 +1,11 @@
-import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerJsdoc from "swagger-jsdoc";
 
 const options: swaggerJsdoc.Options = {
   definition: {
-    openapi: '3.0.0',
+    openapi: "3.0.0",
     info: {
-      title: 'Predictly API',
-      version: '1.0.0',
+      title: "Predictly API",
+      version: "1.0.0",
       description: `
 # Prediction Market for Friend Groups
 
@@ -42,35 +42,46 @@ Most endpoints require a JWT token. To obtain a token:
 - **IPFS Upload** - Store images on decentralized storage
       `,
       contact: {
-        name: 'Predictly Team',
+        name: "Predictly Team",
       },
     },
     servers: [
       {
-        url: 'http://localhost:3001',
-        description: 'Development server',
+        url: "http://localhost:3001",
+        description: "Development server",
       },
     ],
     components: {
       securitySchemes: {
         bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
         },
       },
     },
     tags: [
-      { name: 'Health', description: 'Health check endpoints' },
-      { name: 'Auth', description: 'Authentication endpoints' },
-      { name: 'Users', description: 'User management' },
-      { name: 'Groups', description: 'Group management' },
-      { name: 'Predictions', description: 'Prediction markets - create, vote, resolve' },
-      { name: 'Subscriptions', description: 'Pro subscription management' },
-      { name: 'Upload', description: 'File upload to IPFS' },
+      { name: "Health", description: "Health check endpoints" },
+      { name: "Auth", description: "Authentication endpoints" },
+      { name: "Users", description: "User management" },
+      { name: "Groups", description: "Group management" },
+      {
+        name: "Predictions",
+        description: "Prediction markets - create, vote, resolve",
+      },
+      { name: "Subscriptions", description: "Pro subscription management" },
+      { name: "Upload", description: "File upload to IPFS" },
+      {
+        name: "Waitlist",
+        description: "Waitlist registration with referral tracking",
+      },
+      {
+        name: "Referral",
+        description: "Referral statistics for waitlist members",
+      },
     ],
   },
-  apis: ['./src/routes/*.ts', './src/docs/*.ts'],
+  apis: ["./src/routes/*.ts", "./src/docs/*.ts"],
 };
 
 export const swaggerSpec = swaggerJsdoc(options);

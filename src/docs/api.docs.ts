@@ -162,7 +162,7 @@
  *     deprecated: true
  *     description: |
  *       **DEPRECATED**: Use `/api/auth/wallet/message` and `/api/auth/wallet/verify` instead.
- *       
+ *
  *       Register or login user with Privy ID. Returns JWT token for subsequent requests.
  *     requestBody:
  *       required: true
@@ -688,7 +688,7 @@
  *     summary: Update member role
  *     description: |
  *       Change a member's role within the group. Only admins can perform this action.
- *       
+ *
  *       **Available Roles:**
  *       - `ADMIN` - Full control over the group
  *       - `JUDGE` - Can resolve prediction markets
@@ -869,7 +869,6 @@
  *         createdAt:
  *           type: string
  */
-
 
 /**
  * @swagger
@@ -1082,7 +1081,7 @@
  *     description: |
  *       Create a new prediction market off-chain. This is FREE - no gas fees required.
  *       Market will be in PENDING status until initialized on-chain.
- *       
+ *
  *       **Hybrid System Flow:**
  *       1. Create market off-chain (FREE) → Status: PENDING
  *       2. Initialize on-chain (backend pays gas) → Status: ACTIVE
@@ -1153,7 +1152,7 @@
  *     description: |
  *       Initialize a PENDING market on the blockchain. The backend relay wallet pays the gas fees.
  *       After initialization, market status changes to ACTIVE and users can start voting.
- *       
+ *
  *       **Race Condition Protection:** Uses PostgreSQL advisory locks to prevent duplicate initialization.
  *     security:
  *       - bearerAuth: []
@@ -1676,7 +1675,6 @@
  *         description: Transaction payload generated
  */
 
-
 /**
  * @swagger
  * /api/subscriptions/checkout:
@@ -1770,7 +1768,6 @@
  *         description: Subscription activated
  */
 
-
 /**
  * @swagger
  * /api/wallet/balance/{address}:
@@ -1779,7 +1776,7 @@
  *     summary: Get wallet balance by address
  *     description: |
  *       Check MOVE token balance for any wallet address. No authentication required.
- *       
+ *
  *       **New Endpoint - Wallet Balance API**
  *     parameters:
  *       - in: path
@@ -1830,7 +1827,7 @@
  *     description: |
  *       Check wallet balance with detailed format including MOVE, octas, and formatted string.
  *       No authentication required.
- *       
+ *
  *       **New Endpoint - Wallet Balance API**
  *     parameters:
  *       - in: path
@@ -1889,7 +1886,7 @@
  *     description: |
  *       Check MOVE token balance for the currently authenticated user's wallet.
  *       Requires authentication.
- *       
+ *
  *       **New Endpoint - Wallet Balance API**
  *     security:
  *       - bearerAuth: []
@@ -1937,7 +1934,7 @@
  *     summary: Get user's groups
  *     description: |
  *       Get list of groups where the current user is a member with pagination and filters.
- *       
+ *
  *       **New Endpoint - Sprint 1**
  *     security:
  *       - bearerAuth: []
@@ -2035,7 +2032,7 @@
  *     summary: Get user's vote statistics
  *     description: |
  *       Get aggregate statistics for current user's votes including ROI, win rate, and earnings.
- *       
+ *
  *       **New Endpoint - Sprint 2**
  *     security:
  *       - bearerAuth: []
@@ -2109,7 +2106,7 @@
  *     summary: Check user's vote on specific market
  *     description: |
  *       Check if current user has voted on a specific market and get vote details.
- *       
+ *
  *       **New Endpoint - Sprint 1**
  *     security:
  *       - bearerAuth: []
@@ -2181,7 +2178,7 @@
  *     summary: Get markets resolved by a judge
  *     description: |
  *       Get list of markets resolved by a specific user (judge history).
- *       
+ *
  *       **New Endpoint - Sprint 3**
  *     parameters:
  *       - in: path
@@ -2263,7 +2260,7 @@
  *     summary: Get group settings
  *     description: |
  *       Get group settings including default market type and allowed market types.
- *       
+ *
  *       **New Endpoint - Sprint 3**
  *     security:
  *       - bearerAuth: []
@@ -2307,7 +2304,7 @@
  *     summary: Update group settings
  *     description: |
  *       Update group settings (Admin only).
- *       
+ *
  *       **New Endpoint - Sprint 3**
  *     security:
  *       - bearerAuth: []
@@ -2351,13 +2348,239 @@
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     WaitlistEntry:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           example: "clx1abc2def3ghi4jkl"
+ *           description: Unique CUID identifier
+ *         email:
+ *           type: string
+ *           format: email
+ *           example: "user@example.com"
+ *           description: Lowercase-normalized email address
+ *         walletAddress:
+ *           type: string
+ *           example: "0xabcdef1234567890abcdef1234567890abcdef12"
+ *           description: Lowercase-normalized Ethereum wallet address
+ *         referralCode:
+ *           type: string
+ *           example: "AB12CD"
+ *           description: Unique 6-character referral code ([A-Z0-9]) assigned on registration
+ *         referredBy:
+ *           type: string
+ *           nullable: true
+ *           example: "clx0xyz9876fedcba"
+ *           description: ID of the Waitlist entry whose referral code was used, or null
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           example: "2024-12-13T07:35:29.651Z"
+ *     ReferralStats:
+ *       type: object
+ *       properties:
+ *         referralCode:
+ *           type: string
+ *           example: "AB12CD"
+ *           description: The referral code that was looked up
+ *         totalReferrals:
+ *           type: integer
+ *           example: 7
+ *           description: Number of users who registered using this referral code
+ */
+
+/**
+ * @swagger
+ * /api/waitlist:
+ *   post:
+ *     tags: [Waitlist]
+ *     summary: Register to the waitlist
+ *     description: |
+ *       Register a new user to the waitlist. On success, the user receives a unique
+ *       6-character referral code (`[A-Z0-9]`) they can share with others.
+ *
+ *       **Input normalisation:**
+ *       - `email` is lowercased before storage and duplicate-checking
+ *       - `walletAddress` is lowercased before storage and duplicate-checking
+ *       - `referralCode` (if provided) is uppercased before lookup
+ *
+ *       **Error cases:**
+ *       - `409` – the email **or** wallet address is already registered
+ *       - `404` – the supplied `referralCode` does not match any existing entry
+ *       - `422` – request body fails validation (invalid email, wallet format, etc.)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - walletAddress
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "user@example.com"
+ *                 description: Valid email address
+ *               walletAddress:
+ *                 type: string
+ *                 example: "0xAbCdEf1234567890AbCdEf1234567890AbCdEf12"
+ *                 description: Ethereum wallet address — must match `^0x[0-9a-fA-F]{40}$` (42 chars total)
+ *               referralCode:
+ *                 type: string
+ *                 example: "AB12CD"
+ *                 description: Optional referral code from an existing waitlist member
+ *           examples:
+ *             without_referral:
+ *               summary: Register without a referral code
+ *               value:
+ *                 email: "user@example.com"
+ *                 walletAddress: "0xAbCdEf1234567890AbCdEf1234567890AbCdEf12"
+ *             with_referral:
+ *               summary: Register with a referral code
+ *               value:
+ *                 email: "referred@example.com"
+ *                 walletAddress: "0x1234567890AbCdEf1234567890AbCdEf12345678"
+ *                 referralCode: "AB12CD"
+ *     responses:
+ *       201:
+ *         description: Registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Registered successfully"
+ *                 data:
+ *                   $ref: '#/components/schemas/WaitlistEntry'
+ *       404:
+ *         description: Referral code not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Referral code not found"
+ *       409:
+ *         description: Email or wallet address already registered
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "This email or wallet address is already registered"
+ *       422:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Validation failed"
+ *                 error:
+ *                   type: string
+ *                   example: "walletAddress: Invalid Ethereum wallet address"
+ */
+
+/**
+ * @swagger
+ * /api/referral/{code}:
+ *   get:
+ *     tags: [Referral]
+ *     summary: Get referral statistics
+ *     description: |
+ *       Returns the total number of waitlist registrations attributed to the given
+ *       referral code.  No authentication required.
+ *
+ *       The `code` lookup is **case-sensitive** — codes are always uppercase `[A-Z0-9]`.
+ *     parameters:
+ *       - in: path
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[A-Z0-9]{6}$'
+ *           example: "AB12CD"
+ *         description: The 6-character referral code to look up (uppercase `[A-Z0-9]`)
+ *     responses:
+ *       200:
+ *         description: Referral statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/ReferralStats'
+ *             example:
+ *               success: true
+ *               data:
+ *                 referralCode: "AB12CD"
+ *                 totalReferrals: 7
+ *       404:
+ *         description: Referral code not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Referral code not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error"
+ */
+
+/**
+ * @swagger
  * /api/groups/{groupId}/judges/bulk:
  *   post:
  *     tags: [Groups]
  *     summary: Bulk assign judges
  *     description: |
  *       Assign multiple users as judges in a group (Admin only).
- *       
+ *
  *       **New Endpoint - Sprint 3**
  *     security:
  *       - bearerAuth: []
