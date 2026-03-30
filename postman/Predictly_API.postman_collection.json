@@ -1994,7 +1994,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@example.com\",\n  \"walletAddress\": \"0xAbCdEf1234567890AbCdEf1234567890AbCdEf12\"\n}",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"walletAddress\": \"0x6bedcb44e4d586950e78281e071845cb852e96f01348919a6e98abf2b7aa1773\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2006,7 +2006,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "waitlist"]
             },
-            "description": "Register a new user to the waitlist. Returns a unique referral code. Optionally pass `referralCode` to attribute the registration to an existing user.\n\n**Request Body:**\n- `email` (required): Valid email address\n- `walletAddress` (required): Ethereum wallet address (`0x` + 40 hex chars)\n- `referralCode` (optional): Referral code from an existing waitlist member\n\n**Responses:**\n- `201`: Registered successfully\n- `409`: Email or wallet address already registered\n- `404`: Referral code not found\n- `422`: Validation error"
+            "description": "Register a new user to the waitlist. Returns a unique referral code. Optionally pass `referralCode` to attribute the registration to an existing user.\n\n**Request Body:**\n- `email` (required): Valid email address\n- `walletAddress` (required): Movement wallet address (`0x` + 64 hex chars)\n- `referralCode` (optional): Referral code from an existing waitlist member\n\n**Responses:**\n- `201`: Registered successfully\n- `409`: Email or wallet address already registered\n- `404`: Referral code not found\n- `422`: Validation error"
           }
         },
         {
@@ -2021,7 +2021,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"referred@example.com\",\n  \"walletAddress\": \"0x1234567890AbCdEf1234567890AbCdEf12345678\",\n  \"referralCode\": \"{{referralCode}}\"\n}",
+              "raw": "{\n  \"email\": \"referred@example.com\",\n  \"walletAddress\": \"0xa1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2\",\n  \"referralCode\": \"{{referralCode}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2033,7 +2033,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "waitlist"]
             },
-            "description": "Register a new user to the waitlist using an existing referral code. Uses the `referralCode` collection variable saved from a previous registration.\n\n**Request Body:**\n- `email` (required): Valid email address\n- `walletAddress` (required): Ethereum wallet address (`0x` + 40 hex chars)\n- `referralCode` (optional): Referral code from an existing waitlist member"
+            "description": "Register a new user to the waitlist using an existing referral code. Uses the `referralCode` collection variable saved from a previous registration.\n\n**Request Body:**\n- `email` (required): Valid email address\n- `walletAddress` (required): Movement wallet address (`0x` + 64 hex chars)\n- `referralCode` (optional): Referral code from an existing waitlist member"
           }
         }
       ]

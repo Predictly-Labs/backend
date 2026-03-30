@@ -2364,8 +2364,8 @@
  *           description: Lowercase-normalized email address
  *         walletAddress:
  *           type: string
- *           example: "0xabcdef1234567890abcdef1234567890abcdef12"
- *           description: Lowercase-normalized Ethereum wallet address
+ *           example: "0x6bedcb44e4d586950e78281e071845cb852e96f01348919a6e98abf2b7aa1773"
+ *           description: Lowercase-normalized Movement wallet address
  *         referralCode:
  *           type: string
  *           example: "AB12CD"
@@ -2428,8 +2428,8 @@
  *                 description: Valid email address
  *               walletAddress:
  *                 type: string
- *                 example: "0xAbCdEf1234567890AbCdEf1234567890AbCdEf12"
- *                 description: Ethereum wallet address (must start with 0x followed by exactly 40 hexadecimal characters, 42 chars total)
+ *                 example: "0x6bedcb44e4d586950e78281e071845cb852e96f01348919a6e98abf2b7aa1773"
+ *                 description: Movement wallet address (must start with 0x followed by exactly 64 hexadecimal characters, 66 chars total)
  *               referralCode:
  *                 type: string
  *                 example: "AB12CD"
@@ -2439,12 +2439,12 @@
  *               summary: Register without a referral code
  *               value:
  *                 email: "user@example.com"
- *                 walletAddress: "0xAbCdEf1234567890AbCdEf1234567890AbCdEf12"
+ *                 walletAddress: "0x6bedcb44e4d586950e78281e071845cb852e96f01348919a6e98abf2b7aa1773"
  *             with_referral:
  *               summary: Register with a referral code
  *               value:
  *                 email: "referred@example.com"
- *                 walletAddress: "0x1234567890AbCdEf1234567890AbCdEf12345678"
+ *                 walletAddress: "0xa1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
  *                 referralCode: "AB12CD"
  *     responses:
  *       201:
