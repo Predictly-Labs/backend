@@ -2010,6 +2010,31 @@
           }
         },
         {
+          "name": "Get Waitlist Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/waitlist/leaderboard?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "waitlist", "leaderboard"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (default: 10, max: 100)"
+                }
+              ]
+            },
+            "description": "Get the waitlist referral leaderboard showing top referrers sorted by total referrals. Wallet addresses are masked for privacy.\n\n**Query Parameters:**\n- `page` (optional): Page number, default 1\n- `limit` (optional): Items per page, default 10, max 100\n\n**Responses:**\n- `200`: Leaderboard with ranked entries and pagination meta"
+          }
+        },
+        {
           "name": "Register to Waitlist (with referral)",
           "request": {
             "method": "POST",

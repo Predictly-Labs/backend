@@ -2390,6 +2390,25 @@
  *           type: integer
  *           example: 7
  *           description: Number of users who registered using this referral code
+ *     LeaderboardEntry:
+ *       type: object
+ *       properties:
+ *         rank:
+ *           type: integer
+ *           example: 1
+ *           description: Position on the leaderboard
+ *         walletAddress:
+ *           type: string
+ *           example: "0x6bed...1773"
+ *           description: Masked wallet address of the referrer
+ *         referralCode:
+ *           type: string
+ *           example: "AB12CD"
+ *           description: Referral code of the referrer
+ *         totalReferrals:
+ *           type: integer
+ *           example: 42
+ *           description: Number of users referred
  */
 
 /**
@@ -2504,6 +2523,88 @@
  *                 error:
  *                   type: string
  *                   example: "walletAddress: Invalid Ethereum wallet address"
+ */
+
+/**
+ * @swagger
+ * /api/waitlist/leaderboard:
+ *   get:
+ *     tags: [Waitlist]
+ *     summary: Get waitlist referral leaderboard
+ *     description: |
+ *       Returns a paginated leaderboard of top referrers in the waitlist,
+ *       sorted by total referrals in descending order. Only users with at
+ *       least 1 referral are included. Wallet addresses are masked for privacy.
+ *
+ *       No authentication required.
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of entries per page (max 100)
+ *     responses:
+ *       200:
+ *         description: Leaderboard fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Leaderboard fetched successfully"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/LeaderboardEntry'
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                       example: 1
+ *                     limit:
+ *                       type: integer
+ *                       example: 10
+ *                     total:
+ *                       type: integer
+ *                       example: 25
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 3
+ *             example:
+ *               success: true
+ *               message: "Leaderboard fetched successfully"
+ *               data:
+ *                 - rank: 1
+ *                   walletAddress: "0x6bed...1773"
+ *                   referralCode: "AB12CD"
+ *                   totalReferrals: 42
+ *                 - rank: 2
+ *                   walletAddress: "0xa1b2...a1b2"
+ *                   referralCode: "XY34ZW"
+ *                   totalReferrals: 28
+ *               meta:
+ *                 page: 1
+ *                 limit: 10
+ *                 total: 25
+ *                 totalPages: 3
+ *       500:
+ *         description: Internal server error
  */
 
 /**

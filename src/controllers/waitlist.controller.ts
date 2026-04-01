@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as waitlistService from '../services/waitlist.service.js';
+import * as referralService from '../services/referral.service.js';
 import {
   ERR_USER_ALREADY_EXISTS,
   ERR_REFERRAL_NOT_FOUND,
@@ -8,6 +9,7 @@ import {
   createdResponse,
   errorResponse,
   notFoundResponse,
+  successResponse,
 } from '../utils/response.js';
 
 /**
@@ -31,6 +33,28 @@ export async function register(req: Request, res: Response) {
         );
       }
     }
+    return errorResponse(res, 'Internal server error', 500);
+  }
+}
+
+/**
+ * Get waitlist referral leaderboard
+ * GET /api/waitlist/leaderboard
+ */
+export async function getLeaderboard(req: Request, res: Response) {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 10));
+
+    const result = await referralService.getLeaderboard(page, limit);
+
+    return successResponse(res, result.leaderboard, 'Leaderboard fetched successfully', 200, {
+      page: result.page,
+      limit: result.limit,
+      total: result.total,
+      totalPages: result.totalPages,
+    });
+  } catch (error) {
     return errorResponse(res, 'Internal server error', 500);
   }
 }
